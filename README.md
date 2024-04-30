@@ -2,13 +2,18 @@
 This calculator started as an idea for a final project for [CS50's Python course](https://cs50.harvard.edu/python/2022/) which I felt would be difficult enough to test my own limits as well as be an actual functional tool that I would use for my day job (math tutor).
 As such, the main feature of this calculator is its flexible parsing of algebraic expressions that one would key in much like how one would write them out.
 
-## How to use
+## Installation
 Clone the repository and run the main file
 
 `python Calculator.py`
 
+## Test
+| Command | Description |
+| ------- | ----------- |
+| `help`  | a simple quickstart guide |
+| `vars`  | displays a list of all user-defined variables |
+| `del [v1] [v2] ...` | deletes one or more user-defined variables |
 
-print("Commands: 'var' to display variables. 'del <v1> <v2> ...' to delete variables.")
     print("Here are some things to try:")
     print("∙> 2{3-4[5+65(3!   (Multiple bracket types are supported, and brackets are auto-closed)")
     print("∙> x = 2; 2x + 1/x  [result: 9/2] (semicolons separate expressions and evaluate to the rightmost expression)")
