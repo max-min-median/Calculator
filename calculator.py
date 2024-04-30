@@ -13,6 +13,7 @@ class Calculator:
 
 def main():
     print("Calculator v0.9.0a by max_min_median")
+    print("(type 'help' for a quick tutorial)")
     main_mem = Memory()
     main_mem.load('calc.mem')
     current_ver = main_mem._vars_version
@@ -21,7 +22,9 @@ def main():
         try:
             inp = input(prompt := "∙❯ ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             # check for commands
-            if m := re.match(r'\s*help\s*', inp): print("Help is on the way!\n(Maybe in the next version...)")
+            if m := re.match(r'\s*help\s*', inp):
+                import Help
+                Help.display()
             elif m := re.match(r'\s*vars\s*', inp):
                 print("User-defined Variables")
                 print("──────────────────────")
