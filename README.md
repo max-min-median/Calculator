@@ -7,15 +7,17 @@ Clone the repository and run the main file
 
 `python Calculator.py`
 
-## Test
+## Commands
 | Command | Description |
 | ------- | ----------- |
 | `help`  | a simple quickstart guide |
 | `vars`  | displays a list of all user-defined variables |
 | `del [v1] [v2] ...` | deletes one or more user-defined variables |
 
-    print("Here are some things to try:")
-    print("∙> 2{3-4[5+65(3!   (Multiple bracket types are supported, and brackets are auto-closed)")
+## Things to try
+| Expression | Notes |
+| ---------- | ----- |
+| `2{3-4[5+65(3!` | Multiple bracket types are supported, and brackets are auto-closed |
     print("∙> x = 2; 2x + 1/x  [result: 9/2] (semicolons separate expressions and evaluate to the rightmost expression)")
     print("∙> a = 2/3x; b = 2/3 x  ('a' evaluates as 2/(3x), 'b' evaluates as 2x/3)")
     print("∙> a^bc^d  (evaluates as a^(b*(c^d))")
