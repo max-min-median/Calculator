@@ -1,34 +1,52 @@
-from Expressions import *
 from Vars import *
-from Operators import *
+from Memory import Memory
 from Errors import *
+from Parser import parse
+from Numbers import Number
+import sys
 
-"""
-Sample parsables:
-=================
-5P2, 10C3
-cos(32x+0.5), sin(6pi/3), f(3,4), g
---5--4++-+3-7
-k f(5) --> k*f(5)
-300ab^2 c --> 300a*b^2*c
-300ab^2c --> 300a*b^(2*c)
-1/2 x --> 1/2*x
-2/3x --> 2/(3*x)
-7!/5!3! --> 7!/(5!*3!)
-"""
+
+class Calculator:
+    def __init__(self):
+        self.mem = Memory()
+
 
 def main():
-    print("Calculator v0.1a by max_min_median")
-    vars = {}
-    tokens = []
+    print("Calculator v0.9.0a by max_min_median")
+    main_mem = Memory()
+    main_mem.load('calc.mem')
+    current_ver = main_mem._vars_version
+    import re
     while True:
         try:
-            inp = input("> ")
-            a = Expression.parse(inp, debug = True)[0]
-            print(a)
-        except Exception as e:
-            print(e)
-
+            inp = input(prompt := "∙❯ ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
+            # check for commands
+            if m := re.match(r'\s*help\s*', inp): print("Help is on the way!\n(Maybe in the next version...)")
+            elif m := re.match(r'\s*vars\s*', inp):
+                print("User-defined Variables")
+                print("──────────────────────")
+                for k in main_mem._vars:
+                    print(f'{k} = {main_mem._vars[k].value()}')
+                print()
+            elif m := re.match(r'\s*del\s(.*)$', inp):
+                print("Deleted: " + main_mem.delete(m.group(1)))
+            else:
+                expr = parse(inp, debug=False)
+                if expr is not None: print((val := expr.value(main_mem, debug=False)), '= ' + val.dec() if isinstance(val, Number) and val.denominator != 1 else '', end="\n\n")
+            
+            if main_mem._vars_version != current_ver:
+                main_mem.save("./calc.mem")
+                current_ver = main_mem._vars_version
+        except CalculatorError as e:
+            if len(e.args) > 1: print(' ' * (len(prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]))
+            print(f'{repr(e).split("(")[0]}:', e.args[0])
+            # raise e
+        except RecursionError:
+            print(f'RecursionError: Check for infinite recursion in functions.')
+        except (EOFError, KeyboardInterrupt):
+            break
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(100000)
     main()
+    sys.exit()

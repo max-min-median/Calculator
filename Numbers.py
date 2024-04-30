@@ -1,8 +1,9 @@
 from Errors import *
+from Vars import Value
 import math
 
-class Number:
-    def __init__(self, *inp, st_br=True):
+class Number(Value):
+    def __init__(self, *inp, fcf=True, epsilon=None, max_denom=None):
         if len(inp) == 1: inp = inp[0]
         if isinstance(inp, float): inp = str(inp)
         if isinstance(inp, int):
@@ -11,12 +12,13 @@ class Number:
             self.denominator = 1
         elif isinstance(inp, str):
             from re import match
-            if m := match(r'(-)?(\d+)(?:\.(\d*))?', inp) or match(r'(-)?(\d*)\.(\d+)', inp):
+            if m := match(r'^(-)?(\d+)(?:\.(\d*))?$', inp) or match(r'(-)?(\d*)\.(\d+)', inp):  # integer or float
                 sign, integer, decimal_fraction = ['' if x is None else x for x in m.groups()]
                 self.numerator = int(integer + decimal_fraction)
                 self.denominator = 10 ** len(decimal_fraction)
+                epsilon = epsilon or Number(1, 2 * 10 ** max(len(decimal_fraction), 20), fcf=False)
                 self.sign = 0 if self.numerator == 0 else -1 if sign == '-' else 1
-            elif m := match(r'(-)?(\d+)\/(\d+)', inp):
+            elif m := match(r'^(-)?(\d+)\/(\d+)$', inp):  # fraction
                 sign, num, denom = m.groups()
                 self.numerator = int(num)
                 self.denominator = int(denom)
@@ -29,31 +31,66 @@ class Number:
             self.sign = 0 if inp[0] == 0 else -1 if (inp[0] < 0) + (inp[1] < 0) == 1 else 1
             self.numerator, self.denominator = abs(inp[0]), abs(inp[1])
         else:
-            raise NumberError("Usage: Number(int) | Number(str) | Number(int, int) | Number((int, int))")
-        self.simplify()
-        if st_br and self.denominator > 10000 and self.denominator / self.numerator < 500:
-            sb = self.stern_brocot(epsilon=Number(1,10**12))
-            self.numerator = sb.numerator
-            self.denominator = sb.denominator
+            raise NumberError("Usage: Number(int [, int] | float | str | (int, int), fcf=True, epsilon=None, max_denom=None)")
+
+        if self.denominator != 1:
+            self.simplify()
+            if fcf and (max_denom is None or self.denominator > max_denom):
+                new_frac = self.fast_continued_fraction(epsilon=epsilon, max_denom=max_denom)
+                self.numerator = new_frac.numerator
+                self.denominator = new_frac.denominator
     
     def is_int(self):
         return self.denominator == 1
+
+    def __int__(self): return self.sign * self.numerator // self.denominator
+    def __float__(self): return self.sign * self.numerator / self.denominator
     
+    def dec(self, dp=20):  # TODO round
+        s = '-' if self.sign == -1 else ''
+        s += str(self.numerator // self.denominator)
+        rem = self.numerator % self.denominator
+        if rem == 0: return s
+        rem_lst = []
+        s += '.'
+        frac = ''
+        while rem and len(frac) <= dp:
+            if rem in rem_lst: return s + frac[:(i := rem_lst.index(rem))] + '(' + frac[i:] + ')*'  # repeated decimal representation
+            rem_lst.append(rem)
+            rem *= 10
+            frac = frac + str(rem // self.denominator)
+            rem %= self.denominator
+
+        if len(frac) <= dp or frac[-1] in '01234': return s + frac[:dp]
+        # At this point we don't have a repeated decimal representation, but rounding is required
+        s = [ch for ch in s + frac[:-1]]
+        for i in range(len(s))[::-1]:
+            match s[i]:
+                case '-': s[i] = '-1'
+                case '.': continue
+                case '9': s[i] = '10' if i == 0 else '0'
+                case x: s[i] = str(int(x) + 1); break
+        return ''.join(s[:-1] if dp == 0 else s)
+
     def simplify(self):
         div = math.gcd(self.numerator, self.denominator)
-        self.numerator = int(self.numerator / div)
-        self.denominator = int(self.denominator / div)
+        if self.denominator == 0: print(f'simplify({str(self)})1')
+        self.numerator = self.numerator // div
+        self.denominator = self.denominator // div
+        return self
 
     def stern_brocot(self, epsilon=None, max_denom=math.inf):
+        print(f'Stern-brocot called on {str(self)}')
         if epsilon is None and max_denom == math.inf:
             raise NumberError("Stern-Brocot tree search requires at least 1 keyword argument: 'epsilon' or 'max_denom'")
-        if epsilon is None: epsilon = Number(0, 1, st_br=False)
+        if epsilon is None: epsilon = Number(0)
         whole, frac = self.whole_part(), self.frac_part()
         lower, current, upper = (0, 1), (1, 2), (1, 1)
-        closest_frac, smallest_diff = Number(current, st_br=False), Number(1, 1, st_br=False)
+        closest_frac, smallest_diff = Number(current, fcf=False), Number(1)
 
         while current[1] < max_denom:
-            diff = frac - Number(current, st_br=False)
+            print(current)
+            diff = frac - Number(current, fcf=False)
             abs_diff = abs(diff)
             if abs_diff < smallest_diff:
                 smallest_diff = abs_diff
@@ -63,69 +100,85 @@ class Number:
                 lower, current = current, (current[0] + upper[0], current[1] + upper[1])
             else:
                 current, upper = (lower[0] + current[0], lower[1] + current[1]), current
-        return (Number(closest_frac, st_br=False) + whole) * Number(self.sign, 1, st_br=False)
+        return (Number(closest_frac, fcf=False) + whole) * Number(self.sign, 1, fcf=False)
+
+    def fast_continued_fraction(self, epsilon=None, max_denom=None):
+        # print(f'Fast continued fractions called on {str(self)}')
+        if epsilon is None and max_denom is None:
+            # print('Fast continued fractions: No arguments supplied, defaulting to epsilon of 1e-20')
+            epsilon = Number(1, 10 ** 20, fcf=False)
+        elif epsilon is not None and max_denom is not None:
+            raise NumberError("Fast continued fractions: Received 2 keyword args! Please provide only 1 keyword arg ('epsilon' or 'max_denom')")
+        epsilon = epsilon or Number(0)
+        max_denom = max_denom or math.inf
+
+        lower, upper, alpha = (0, 1), (1, 0), abs(self)
+        gamma = (alpha * lower[1] - lower[0]) / (-alpha * upper[1] + upper[0])
+        prev = lower
+        while True:
+            s = int(gamma)
+            lower = (lower[0] + s * upper[0], lower[1] + s * upper[1])
+            # print(lower, s, lower[0] / lower[1])
+            if abs(self - (num := Number(lower, fcf=False))) < epsilon or gamma == s: return num
+            if lower[1] > max_denom: return Number(prev, fcf=False)
+            prev = lower
+            lower, upper = upper, lower
+            gamma = Number(1) / (gamma - s)
 
     def __add__(self, other):
-        if not isinstance(other, Number): raise TypeError('Expected another Number')
+        if isinstance(other, (int, float)): other = Number(other)
+        if not isinstance(other, Number): raise NumberError('Expected another Number')
         num = self.sign * self.numerator * other.denominator + other.sign * self.denominator * other.numerator
         denom = self.denominator * other.denominator
-        return Number(num, denom, st_br=False)
+        return Number(num, denom, fcf=False).simplify()
         
-    def __neg__(self):
-        return Number(-self.numerator, self.denominator, st_br=False)
-
-    def __sub__(self, other):
-        return self + (-other)
-
-    def __mul__(self, other):
-        return self / (Number(1, 1, st_br=False) / other)
+    def __neg__(self): return Number(-self.sign * self.numerator, self.denominator, fcf=False)
+    def __sub__(self, other): return self + (-other)
+    def __mul__(self, other): return Number(0) if other == 0 or Number(0) == other else self / (Number(1) / other)
 
     def __truediv__(self, other):
-        if not isinstance(other, Number): raise TypeError('Expected another Number')
-        return Number(self.sign * other.sign * self.numerator * other.denominator, self.denominator * other.numerator, st_br=False)
+        if isinstance(other, (int, float)): other = Number(other)
+        if not isinstance(other, Number): raise NumberError('Expected another Number')
+        if other.sign == 0: raise ZeroDivisionError('Integer division by 0')
+        return Number(self.sign * other.sign * self.numerator * other.denominator, self.denominator * other.numerator, fcf=False).simplify()
+
+    def __mod__(self, other):
+        if isinstance(other, (int, float)): other = Number(other)
+        if not isinstance(other, Number): raise NumberError('Expected another Number')
+        if other.sign == 0: raise ZeroDivisionError('Integer division by 0')
+        return self - other * int(self / other)
 
     def __gt__(self, other):
-        if not isinstance(other, Number): raise TypeError('Expected another Number')
-        return (diff := self - other).sign == 1 and diff.numerator > 0
+        if isinstance(other, (int, float)): other = Number(other)
+        if not isinstance(other, Number): raise NumberError('Expected another Number')
+        return (self - other).sign == 1
 
-    def __lt__(self, other):
-        return other > self
+    def __lt__(self, other): return -self > -other
 
     def __eq__(self, other):
-        if not isinstance(other, Number): raise TypeError('Expected another Number')
-        return (self - other).numerator == 0
+        if isinstance(other, (int, float)): other = Number(other)
+        if not isinstance(other, Number): return False
+        return (self - other).sign == 0
 
-    def __ne__(self, other):
-        return not self == other
+    def __ne__(self, other): return not self == other
+    def __ge__(self, other): return not self < other
+    def __le__(self, other): return not self > other
+    def __abs__(self): return Number(self.numerator, self.denominator, fcf=False)
 
-    def __ge__(self, other):
-        return not self < other
+    def frac_part(self): return Number(self.numerator % self.denominator, self.denominator, fcf=False)
     
-    def __le__(self, other):
-        return not self > other
-    
-    def __abs__(self):
-        return Number(self.numerator, self.denominator, st_br=False)
-    
-    def whole_part(self):
-        return Number(self.numerator // self.denominator, 1, st_br=False)
-
-    def frac_part(self):
-        return Number(self.numerator % self.denominator, self.denominator, st_br=False)
+    def value(self, *args, **kwargs):
+        return self
 
     def __str__(self):
         return ('-' if self.sign == -1 else '') + str(self.numerator) + ('' if self.denominator == 1 else '/' + str(self.denominator))
 
-"""
-a = Number('0.75') # 3/4
-b = Number('0.4') # 2/5
-c = Number((1, 3)) # 1/3
-pi = Number('3.1415926535897932384626')
-e = Number('2.7182818284590452353602874713526624')
-print(str(e))
-print(str(e.stern_brocot(max_denom = 5000)))
-print(str(pi))
-print(pi.stern_brocot(max_denom = 5000))
-"""
 
-pass
+if __name__ == '__main__':
+    print(Number(125842, 9999000).dec(30))
+    print(Number(-8,3).dec(20))
+    print(Number(9,11).dec(20))
+    print(Number(7,13).dec(20))
+    print(Number(538461,999999).dec(5))
+    print(Number(7,13).dec(20))
+    pass

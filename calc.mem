@@ -1,0 +1,9 @@
+integrate(f, l, u) = u - l <= delta && (u - l)(f(l) + f(u)) / 2 || integrate(f, l, (l + u) / 2) + integrate(f, (l + u) / 2, u)
+delta = 1/100
+sigma(f, l, u) = (l <= u) && f(l) + sigma(f, l + 1, u)
+a = 3
+b = 4
+c = 5
+d = 6
+f(x) = x^3 / 6
+x = 3
