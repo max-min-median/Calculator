@@ -26,20 +26,12 @@ class Memory:
         self._full_version = 0
         self._full = Memory.combine()
         # for testing
-        if load:
-            try:
-                load_file = open(load)
-            except:
-                print(f"Error loading {load}")
-            with load_file:
-                pass
 
         
     def get(self, str):
-        return self._vars[str] if str in self._vars else None
+        return self.update[str] if str in self.update else None
     
     def add(self, str, val):
-        import traceback
         need_sort = True if str not in self._vars else False
         self._vars[str] = val
         if need_sort:
@@ -74,6 +66,7 @@ class Memory:
             for line in f:
                 Parser.parse(line).value(mem=self, debug=False)
 
+
     @staticmethod
     def combine(*dicts):  # combines Memory objects and/or dictionaries and produces a dict
         # print("Combining dicts...")
@@ -85,7 +78,7 @@ class Memory:
         return tmp
 
     @property
-    def full(self):
+    def update(self):
         if self._full_version < self._vars_version:
             # print(f"Memory: updating full list...")
             self._full = Memory.combine(self._vars)

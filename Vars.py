@@ -64,7 +64,7 @@ class WordToken:
                 var_lst += [[this_word] + spl for spl in split_rest_vars]
             return lst, var_lst
         
-        word_dict = mem if isinstance(mem, dict) else mem.full
+        word_dict = mem if isinstance(mem, dict) else mem.update
         split_lst, var_lst = try_split(self.name)
 
         if len(split_lst) == 0: raise ParseError(f"Unable to parse '{self.name}'")

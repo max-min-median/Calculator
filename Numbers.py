@@ -46,7 +46,7 @@ class Number(Value):
     def __int__(self): return self.sign * self.numerator // self.denominator
     def __float__(self): return self.sign * self.numerator / self.denominator
     
-    def dec(self, dp=20):  # TODO round
+    def dec(self, dp=20):
         s = '-' if self.sign == -1 else ''
         s += str(self.numerator // self.denominator)
         rem = self.numerator % self.denominator
