@@ -3,6 +3,7 @@ from Vars import Value
 import math
 
 class Number(Value):
+
     def __init__(self, *inp, fcf=True, epsilon=None, max_denom=None):
         if len(inp) == 1: inp = inp[0]
         if isinstance(inp, float): inp = str(inp)
@@ -16,7 +17,7 @@ class Number(Value):
                 sign, integer, decimal_fraction = ['' if x is None else x for x in m.groups()]
                 self.numerator = int(integer + decimal_fraction)
                 self.denominator = 10 ** len(decimal_fraction)
-                epsilon = epsilon or Number(1, 2 * 10 ** max(len(decimal_fraction), 20), fcf=False)
+                epsilon = epsilon or Number(1, 2 * 10 ** max(len(decimal_fraction), 30), fcf=False)
                 self.sign = 0 if self.numerator == 0 else -1 if sign == '-' else 1
             elif m := match(r'^(-)?(\d+)\/(\d+)$', inp):  # fraction
                 sign, num, denom = m.groups()
@@ -35,7 +36,7 @@ class Number(Value):
 
         if self.denominator != 1:
             self.simplify()
-            if fcf and (max_denom is None or self.denominator > max_denom):
+            if fcf and (epsilon is not None or max_denom is not None and self.denominator > max_denom):
                 new_frac = self.fast_continued_fraction(epsilon=epsilon, max_denom=max_denom)
                 self.numerator = new_frac.numerator
                 self.denominator = new_frac.denominator
@@ -43,10 +44,10 @@ class Number(Value):
     def is_int(self):
         return self.denominator == 1
 
-    def __int__(self): return self.sign * self.numerator // self.denominator
-    def __float__(self): return self.sign * self.numerator / self.denominator
+    def __int__(self): return self.numerator // self.denominator * self.sign
+    def __float__(self): return self.numerator / self.denominator * self.sign
     
-    def dec(self, dp=20):
+    def dec(self, dp=25):
         s = '-' if self.sign == -1 else ''
         s += str(self.numerator // self.denominator)
         rem = self.numerator % self.denominator
@@ -103,10 +104,11 @@ class Number(Value):
         return (Number(closest_frac, fcf=False) + whole) * Number(self.sign, 1, fcf=False)
 
     def fast_continued_fraction(self, epsilon=None, max_denom=None):
+        if self < 0: return -(-self).fast_continued_fraction(epsilon=epsilon, max_denom=max_denom)
         # print(f'Fast continued fractions called on {str(self)}')
         if epsilon is None and max_denom is None:
             # print('Fast continued fractions: No arguments supplied, defaulting to epsilon of 1e-20')
-            epsilon = Number(1, 10 ** 20, fcf=False)
+            epsilon = Number(1, 10 ** 30, fcf=False)
         elif epsilon is not None and max_denom is not None:
             raise NumberError("Fast continued fractions: Received 2 keyword args! Please provide only 1 keyword arg ('epsilon' or 'max_denom')")
         epsilon = epsilon or Number(0)
@@ -146,7 +148,9 @@ class Number(Value):
         if isinstance(other, (int, float)): other = Number(other)
         if not isinstance(other, Number): raise NumberError('Expected another Number')
         if other.sign == 0: raise ZeroDivisionError('Integer division by 0')
-        return self - other * int(self / other)
+        int_pieces = self / other
+        int_pieces = int_pieces.sign * int_pieces.numerator // int_pieces.denominator
+        return self - other * int_pieces
 
     def __gt__(self, other):
         if isinstance(other, (int, float)): other = Number(other)
@@ -165,7 +169,7 @@ class Number(Value):
     def __le__(self, other): return not self > other
     def __abs__(self): return Number(self.numerator, self.denominator, fcf=False)
 
-    def frac_part(self): return Number(self.numerator % self.denominator, self.denominator, fcf=False)
+    def frac_part(self): return Number(self.numerator % self.denominator * self.sign, self.denominator, fcf=False)
     
     def value(self, *args, **kwargs):
         return self
@@ -173,7 +177,16 @@ class Number(Value):
     def __str__(self):
         return ('-' if self.sign == -1 else '') + str(self.numerator) + ('' if self.denominator == 1 else '/' + str(self.denominator))
 
+    def __repr__(self):
+        return ('-' if self.sign == -1 else '') + str(self.numerator) + ('' if self.denominator == 1 else '/' + str(self.denominator))
 
+    def disp(self, frac_max_length=20):
+        if self.denominator == 1: return str(self)
+        s = str(self)
+        if len(s) <= frac_max_length: return s + ' = ' + self.dec()
+        return self.dec()
+
+# test code
 if __name__ == '__main__':
     print(Number(125842, 9999000).dec(30))
     print(Number(-8,3).dec(20))

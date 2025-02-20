@@ -6,6 +6,9 @@ class Value:
     def __str__(self):
         return self.name
 
+    def disp(self, *args, **kwargs):
+        return str(self)
+
     def value(self, *args, **kwargs):
         raise NotImplementedError(f'subclass {type(self)} has no implementation of value()')
 

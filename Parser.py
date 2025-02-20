@@ -23,7 +23,7 @@ def parse(s, start_pos=0, brackets='', parent=None, debug=False):
             if m := re.match(regex, ss):
                 add_token(Op.regex[regex], m)
                 return True
-        return False            
+        return False
     
     expr = Expression(input_string=s, brackets=brackets, parent=parent, parent_offset=start_pos)
     tokens, pos_list = expr.tokens, expr.token_pos
@@ -67,7 +67,7 @@ def parse(s, start_pos=0, brackets='', parent=None, debug=False):
             validate(expr)
             return expr
         elif m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', ss):   # Number. Cannot follow Number, space_separator, or Var
-            add_token(Number(m.group()), m)
+            add_token(Number(m.group(), fcf=True, epsilon=Number(1, 10**20, fcf=False)), m)
         elif check_Op_regex():
             continue
         elif m := re.match(r'([A-Za-z](?:\w*(?:\d(?!(?:[0-9.]))|[A-Za-z_](?![A-Za-z])))?)', ss):  # Word token (might be a concatenation of vars & possible func at the end) 
@@ -113,6 +113,7 @@ def validate(expr):
         i += 1
     expr.tokens, expr.token_pos = lst[1:-1], pos_lst[1:-1]
 
+# test code
 if __name__ == '__main__':
     from Memory import Memory
     mem = Memory(test=True)

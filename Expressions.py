@@ -123,7 +123,7 @@ class Tuple(Expression):
 
     def __str__(self):
         if self.display_string == '':
-            self.display_string = self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
+            self.display_string = self.brackets[:1] + ', '.join([x.disp() for x in self.tokens]) + self.brackets[1:]
         return self.display_string
 
     def value(self, mem=None, debug=False):
@@ -131,4 +131,3 @@ class Tuple(Expression):
         tup.token_pos = self.token_pos
         tup.tokens = [expr.value(mem=mem, debug=debug) for expr in self.tokens]
         return tup
-        
