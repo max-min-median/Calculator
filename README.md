@@ -1,5 +1,5 @@
 # __Calculator__
-This calculator started as an idea for a final project for [CS50's Python course](https://cs50.harvard.edu/python/2022/) which I felt would be difficult enough to test my own limits as well as be an actual functional tool that I would use for my day job (math tutor).
+This calculator started as an idea for a final project for [REDACTED: name of a particular online course] which I felt would be difficult enough to test my own limits as well as be an actual functional tool that I would use for my day job (math tutor).
 As such, the main feature of this calculator is its flexible parsing of algebraic expressions that one would key in much like how one would write them out.
 
 ## Installation
