@@ -16,7 +16,7 @@ class Var(Value):
     def __init__(self, name):
         super().__init__(name=name)
 
-    def value(self, *args, mem=None):
+    def value(self, *args, mem=None, **kwargs):
         from Errors import EvaluationError
         if mem is None: raise EvaluationError(f"No memory provided to Var object '{self.name}'")
         val = mem.get(self.name)
@@ -76,7 +76,6 @@ class WordToken:
             print(f"Warning: Found multiple ways to parse '{self.name}': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
         return split_lst[0], var_lst[0]
 
-    
     def to_LValue(self):
         return LValue(name=self.name)
 

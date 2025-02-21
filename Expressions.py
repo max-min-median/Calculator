@@ -29,8 +29,7 @@ class Expression(Value):
     def pos(self):
         return (self.offset, self.offset + len(self.input_string))
 
-    def value(self, mem=None, debug=False):
-        if mem is None: raise ParseError('Cannot evaluate Expression without providing a memory')
+    def value(self, mem, epsilon, debug=False):
         dummy = Var('dummy')
 
         def evaluate(power=0, index=0, skip_eval=False):  # returns (Value, end_index)
@@ -58,7 +57,7 @@ class Expression(Value):
                     continue
                 match L, token:
                     case None, Value():
-                        L = skip_eval and dummy or token.value(mem=mem)
+                        L = skip_eval and dummy or token.value(mem=mem, epsilon=epsilon)
                         index += 1
                         continue
                     case None, Postfix() | Infix():
@@ -77,15 +76,15 @@ class Expression(Value):
                     case Operator() if token.power[0] <= power: return L, index - 1
                     case Prefix():
                         L, index = evaluate(power=token.power[1], index=index+1, skip_eval=skip_eval)
-                        L = try_operate(L)
+                        L = try_operate(L, mem=mem, epsilon=epsilon)
                     case Postfix():
-                        L = try_operate(L)
+                        L = try_operate(L, mem=mem, epsilon=epsilon)
                     case Infix():
                         old_index = index
                         exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [Op.implicit_mult, Op.implicit_mult_prefix, Op.function_invocation]), skip_eval = skip_eval or token == Op.logical_and and L.sign == 0 or token == Op.logical_or and L.sign != 0)
                         if token == Op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.pos_of_elem(old_index))
                         elif token != Op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.pos_of_elem(old_index))
-                        else: L = try_operate(L, exp, mem=mem)
+                        else: L = try_operate(L, exp, mem=mem, epsilon=epsilon)
                     case None:
                         return L, index - 1
                 index += 1
@@ -110,6 +109,7 @@ class Expression(Value):
             self.display_string = self.brackets[:1] + self.display_string + self.brackets[1:]
         return self.display_string
 
+
 class Tuple(Expression):
 
     def __init__(self, input_string=None, brackets='()', parent=None, parent_offset=0):
@@ -126,8 +126,8 @@ class Tuple(Expression):
             self.display_string = self.brackets[:1] + ', '.join([x.disp() for x in self.tokens]) + self.brackets[1:]
         return self.display_string
 
-    def value(self, mem=None, debug=False):
+    def value(self, mem=None, epsilon=None, debug=False):
         tup = Tuple(input_string=self.input_string, brackets=self.brackets, parent=self.parent, parent_offset=self.parent_offset)
         tup.token_pos = self.token_pos
-        tup.tokens = [expr.value(mem=mem, debug=debug) for expr in self.tokens]
+        tup.tokens = [expr.value(mem=mem, epsilon=epsilon, debug=debug) for expr in self.tokens]
         return tup

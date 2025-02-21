@@ -1,4 +1,3 @@
-{"frac_max_length": 20, "debug": false}
 binomcdf(n, p, a, b) = sigma(binompdf(n, p, x), a, b)
 binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
@@ -20,4 +19,4 @@ g(p) = f(p, y)
 p(x1, x2) = (e^(b0 + b1x1 + b2x2))/(1 + e^(b0 + b1x1 + b2x2))
 r = 7
 t = 1
-x = 6134899525417045/11716795018106946
+x = 3125

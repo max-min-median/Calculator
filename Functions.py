@@ -6,6 +6,7 @@ from Errors import ParseError, EvaluationError
 
 # ffg(7), f(g(3, 4)), (fg^2)(x), (f(fg)^2)(7)
 
+
 class Function(Value):
     def __init__(self, name='<fn>', params=None, expr=None):
         from Expressions import Tuple
@@ -36,7 +37,7 @@ class Function(Value):
         else:
             return self.name
 
-    def invoke(self, tup_or_expr, mem=None, debug=False):
+    def invoke(self, tup_or_expr, mem=None, epsilon=None, debug=False):
         if mem is None:  raise EvaluationError(f"No memory passed to function '{self.name}'")
         from Expressions import Tuple
         from Memory import Memory
@@ -55,7 +56,7 @@ class Function(Value):
         # store inputs into own copy of word_dict
         for k, v in list(zip(self.params, func_inputs)): this_invocation_dict[k] = v
         # evaluate the expression
-        return self.expression.value(mem=this_invocation_dict, debug=debug)
+        return self.expression.value(mem=this_invocation_dict, epsilon=epsilon, debug=debug)
 
     def __mul__(self, other):
         if not isinstance(other, Function): raise EvaluationError('Incorrect type for function composition')

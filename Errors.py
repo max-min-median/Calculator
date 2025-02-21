@@ -19,4 +19,8 @@ class ParseError(CalculatorError):
     def __init__(self, err_msg='Parse error!', *args):
         super().__init__(err_msg, *args)
 
+class SettingsError(CalculatorError):
+    def __init__(self, err_msg='Settings error!', *args):
+        super().__init__(err_msg, *args)
+
 pass

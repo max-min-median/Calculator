@@ -27,7 +27,7 @@ def combination_fn(n, r, perm=False, **kwargs):  # nCr
     for i in range(1, r + 1): res *= n + 1 - i; res //= i ** (not perm)
     return Number(res)
 
-def exponentiation_fn(a, b, *args, epsilon=Number(1, 10**30, fcf=False), fcf=False, **kwargs):
+def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
     if isinstance(a, Function):
         if b.is_int(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
@@ -39,9 +39,9 @@ def exponentiation_fn(a, b, *args, epsilon=Number(1, 10**30, fcf=False), fcf=Fal
     if b.is_int(): return int_power(a, int(b), epsilon=epsilon, fcf=fcf)
     if a.sign == -1: raise CalculatorError(f'Cannot raise a negative number {str(a)} to a fractional power {str(b)}')
     # a^b = e^(b ln a)
-    return exp(b * ln_fn(a, epsilon=epsilon))
+    return exp(b * ln_fn(a, epsilon=epsilon), epsilon=epsilon)
 
-def int_power(base, power, *args, epsilon=Number(1, 10**30, fcf=False), fcf=False, **kwargs):
+def int_power(base, power, *args, epsilon=None, fcf=False, **kwargs):
     if not isinstance(power, int): raise CalculatorError(f'int_power() expects integral power, received {power}')
     pow = abs(power)
     int_part = Number(1)
@@ -52,8 +52,8 @@ def int_power(base, power, *args, epsilon=Number(1, 10**30, fcf=False), fcf=Fals
     if power & 1 == 1 and base.sign == -1: int_part = -int_part
     return (Number(1) / int_part if power < 0 else int_part).fast_continued_fraction(epsilon=epsilon)
 
-def exp(x, *args, epsilon=Number(1, 10**30, fcf=False), fcf=False, **kwargs):
-    int_part = int_power(e, int(x))
+def exp(x, *args, epsilon=None, fcf=False, **kwargs):
+    int_part = int_power(e, int(x), epsilon=epsilon)
     x = x.frac_part()
     sum = term = i = Number(1)
     while (abs(term) >= epsilon):
@@ -72,7 +72,7 @@ def exp(x, *args, epsilon=Number(1, 10**30, fcf=False), fcf=False, **kwargs):
 # x = x0 - 1 + A/e^x0 <- Newton's Method
 # https://qr.ae/pYekgm
 
-def ln_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def ln_fn(x, epsilon=None, **kwargs):
     if x <= 0: raise CalculatorError(f'ln can only apply to a positive number.')
     if x < 1: return -ln_fn(Number(1) / x, epsilon=epsilon, **kwargs)
     ln2s = ln10s = 0
@@ -85,11 +85,11 @@ def ln_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
     x0 = Number(0)
     delta_x = epsilon * Number(2)
     while abs(delta_x) > epsilon:
-        delta_x = x / exp(x0) - 1
+        delta_x = x / exp(x0, epsilon=epsilon) - 1
         x0 = (x0 + delta_x).fast_continued_fraction(epsilon=epsilon)
     return (ln10 * ln10s + ln2 * ln2s + x0).fast_continued_fraction(epsilon=epsilon)
 
-def sin_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def sin_fn(x, epsilon=None, **kwargs):
     if x < 0: return -sin_fn(-x, epsilon=epsilon, **kwargs)
     x = x % (pi * 2)
     if x > pi * 3 / 2: return -sin_fn(pi * 2 - x, epsilon=epsilon, **kwargs)
@@ -107,13 +107,13 @@ def sin_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
         sum += delta_x
     return sum.fast_continued_fraction(epsilon=epsilon)
 
-def cos_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def cos_fn(x, epsilon=None, **kwargs):
     return sin_fn(pi / 2 - x, epsilon=epsilon, **kwargs)
 
-def tan_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def tan_fn(x, epsilon=None, **kwargs):
     return sin_fn(x, epsilon=epsilon, **kwargs) / cos_fn(x, epsilon=epsilon, **kwargs)
 
-def arcsin_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def arcsin_fn(x, epsilon=None, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
     if x < 0: return -arcsin_fn(-x, epsilon=epsilon, **kwargs)
     if x > 1: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
@@ -130,12 +130,12 @@ def arcsin_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
         sum = sum.fast_continued_fraction(epsilon=epsilon)
     return sum
 
-def arccos_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def arccos_fn(x, epsilon=None, **kwargs):
     if x < 0: return pi - arccos_fn(-x, epsilon=epsilon, **kwargs)
     if x > 1: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
-    return pi / 2 - arcsin_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs)
+    return pi / 2 - arcsin_fn(x, epsilon=epsilon, **kwargs)
 
-def arctan_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
+def arctan_fn(x, epsilon=None, **kwargs):
     if x < 0: return -arctan_fn(-x, epsilon=epsilon, **kwargs)
     if x > 1: return pi / 2 - arctan_fn(Number(1) / x, epsilon=epsilon, **kwargs)
     # https://en.wikipedia.org/wiki/Arctangent_series
@@ -153,7 +153,7 @@ def arctan_fn(x, epsilon=Number(1, 10**30, fcf=False), **kwargs):
         num += two
     return sum
 
-def assignment_fn(L, R, mem=None):
+def assignment_fn(L, R, mem=None, **kwargs):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
     mem.add(L.name, R)
@@ -174,8 +174,8 @@ implicit_mult_prefix = Infix('∙', lambda x, y, *args, **kwargs: x * y)
 frac_div = Infix('/', lambda x, y, *args, **kwargs: x / y)
 division = Infix(' / ', lambda x, y, *args, **kwargs: x / y)
 modulo = Infix(' % ', lambda x, y, *args, **kwargs: x % y)
-positive = Prefix('+', lambda x: x)
-negative = Prefix('-', lambda x: -x)
+positive = Prefix('+', lambda x, *args, **kwargs: x)
+negative = Prefix('-', lambda x, *args, **kwargs: -x)
 lt = Infix(' < ', lambda x, y, *args, **kwargs: Number(1) if x < y else Number(0))
 lt_eq = Infix(' <= ', lambda x, y, *args, **kwargs: Number(1) if x <= y else Number(0))
 gt = Infix(' > ', lambda x, y, *args, **kwargs: Number(1) if x > y else Number(0))
@@ -200,8 +200,8 @@ weak_arcsin = Prefix('asin ', arcsin_fn)
 weak_arccos = Prefix('acos ', arccos_fn)
 weak_arctan = Prefix('atan ', arctan_fn)
 weak_ln = Prefix('ln ', ln_fn)
-weak_sqrt = Prefix('sqrt ', lambda x: exponentiation_fn(x, Number(1, 2, fcf=False)))
-sqrt = Prefix('sqrt', lambda x: exponentiation_fn(x, Number(1, 2, fcf=False)))
+weak_sqrt = Prefix('sqrt ', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
+sqrt = Prefix('sqrt', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
 exponentiation = Infix('^', exponentiation_fn)
 factorial = Postfix('!', factorial_fn)
 

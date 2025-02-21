@@ -107,8 +107,7 @@ class Number(Value):
         if self < 0: return -(-self).fast_continued_fraction(epsilon=epsilon, max_denom=max_denom)
         # print(f'Fast continued fractions called on {str(self)}')
         if epsilon is None and max_denom is None:
-            # print('Fast continued fractions: No arguments supplied, defaulting to epsilon of 1e-20')
-            epsilon = Number(1, 10 ** 30, fcf=False)
+            raise NumberError('No epsilon supplied, unable to perform FCF')
         elif epsilon is not None and max_denom is not None:
             raise NumberError("Fast continued fractions: Received 2 keyword args! Please provide only 1 keyword arg ('epsilon' or 'max_denom')")
         epsilon = epsilon or Number(0)
@@ -180,10 +179,10 @@ class Number(Value):
     def __repr__(self):
         return ('-' if self.sign == -1 else '') + str(self.numerator) + ('' if self.denominator == 1 else '/' + str(self.denominator))
 
-    def disp(self, frac_max_length=20):
+    def disp(self, frac_max_length, decimal_places):
         if self.denominator == 1: return str(self)
         s = str(self)
-        if len(s) <= frac_max_length: return s + ' = ' + self.dec()
+        if len(s) <= frac_max_length: return s + ' = ' + self.dec(dp=decimal_places)
         return self.dec()
 
 # test code
