@@ -121,9 +121,16 @@ class Tuple(Expression):
         tup.tokens = [expr]
         return tup
 
+    def disp(self, frac_max_length, final_precision):
+        from Numbers import Number
+        final_epsilon = Number(1, 10 ** final_precision, fcf=False)
+        temp_tokens = [token.fast_continued_fraction(epsilon=final_epsilon) if isinstance(token, Number) else token for token in self.tokens]
+        self.display_string = self.brackets[:1] + ', '.join([x.disp(frac_max_length, final_precision) for x in temp_tokens]) + self.brackets[1:]
+        return self.display_string
+
     def __str__(self):
         if self.display_string == '':
-            self.display_string = self.brackets[:1] + ', '.join([x.disp() for x in self.tokens]) + self.brackets[1:]
+            self.display_string = self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
         return self.display_string
 
     def value(self, mem=None, epsilon=None, debug=False):

@@ -6,7 +6,7 @@ class Value:
     def __str__(self):
         return self.name
 
-    def disp(self, *args, **kwargs):
+    def disp(self, frac_max_length, final_precision):
         return str(self)
 
     def value(self, *args, **kwargs):

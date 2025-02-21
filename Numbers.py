@@ -183,7 +183,7 @@ class Number(Value):
         if self.denominator == 1: return str(self)
         s = str(self)
         if len(s) <= frac_max_length: return s + ' = ' + self.dec(dp=decimal_places)
-        return self.dec()
+        return self.dec(dp=decimal_places)
 
 # test code
 if __name__ == '__main__':
