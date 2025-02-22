@@ -193,6 +193,7 @@ arcsin = Prefix('asin', arcsin_fn)
 arccos = Prefix('acos', arccos_fn)
 arctan = Prefix('atan', arctan_fn)
 ln = Prefix('ln ', ln_fn)
+lg = Prefix('lg ', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
 weak_sin = Prefix('sin ', sin_fn)
 weak_cos = Prefix('cos ', cos_fn)
 weak_tan = Prefix('tan ', tan_fn)
@@ -200,6 +201,7 @@ weak_arcsin = Prefix('asin ', arcsin_fn)
 weak_arccos = Prefix('acos ', arccos_fn)
 weak_arctan = Prefix('atan ', arctan_fn)
 weak_ln = Prefix('ln ', ln_fn)
+weak_lg = Prefix('lg ', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
 weak_sqrt = Prefix('sqrt ', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
 sqrt = Prefix('sqrt', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
 exponentiation = Infix('^', exponentiation_fn)
@@ -238,6 +240,7 @@ regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
          r'(arctan|atan)\s+': weak_arctan,
          r'(sqrt)\s+': weak_sqrt,
          r'(ln)\s+': weak_ln,
+         r'(lg)\s+': weak_lg,
          r'(sin)(?![A-Za-z_])': sin,
          r'(cos)(?![A-Za-z_])': cos,
          r'(tan)(?![A-Za-z_])': tan,
@@ -246,6 +249,7 @@ regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
          r'(arctan|atan)(?![A-Za-z_])': arctan,
          r'(sqrt)(?![A-Za-z_])': sqrt,
          r'(ln)(?![A-Za-z_])': ln,
+         r'(lg)(?![A-Za-z_])': lg,
          r'(\s)\s*': space_separator,
          r'\s*(;)\s*': semicolon_separator,
          r'(P)': permutation,
@@ -276,6 +280,7 @@ power = {
          arccos: (11.1, 10.9),
          arctan: (11.1, 10.9),
          ln: (11.1, 10.9),
+         lg: (11.1, 10.9),
          negative: (11.1, 10.9),
          positive: (11.1, 10.9),
          implicit_mult_prefix: (10, 10),
@@ -288,6 +293,7 @@ power = {
          weak_arccos: (11.1, 8.9),
          weak_arctan: (11.1, 8.9),
          weak_ln: (11.1, 8.9),
+         weak_lg: (11.1, 8.9),
          permutation: (9, 9),
          combination: (9, 9),
          division: (8, 8),
@@ -312,7 +318,6 @@ power = {
 
 # a + (b=3) + 4^b(c=b+1)a!sinb + 7c
 # 4  (b=4) yz^ab cos 7 b sin 3 + 8
-
 # Postfix (UR) 10
 # 9- Implicit Mult -8
 # 9- Exponentiation -8
@@ -323,5 +328,3 @@ power = {
 # 3-OR-3
 # 2-Assignment-2
 # 1-Comma-1
-
-pass
