@@ -11,7 +11,7 @@ import sys
 #         self.mem = Memory()
 
 def main():
-    print("Calculator v1.3.1-beta by max_min_median")
+    print("Calculator v1.3.2-beta by max_min_median")
     print("(type 'help' for a quick tutorial)\n")
     settings = Settings('calc_settings.txt')
     main_mem = Memory('calc_mem.txt', settings)

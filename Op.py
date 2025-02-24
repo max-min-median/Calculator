@@ -192,8 +192,8 @@ tan = Prefix('tan', tan_fn)
 arcsin = Prefix('asin', arcsin_fn)
 arccos = Prefix('acos', arccos_fn)
 arctan = Prefix('atan', arctan_fn)
-ln = Prefix('ln ', ln_fn)
-lg = Prefix('lg ', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
+ln = Prefix('ln', ln_fn)
+lg = Prefix('lg', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
 weak_sin = Prefix('sin ', sin_fn)
 weak_cos = Prefix('cos ', cos_fn)
 weak_tan = Prefix('tan ', tan_fn)
@@ -284,7 +284,7 @@ power = {
          negative: (11.1, 10.9),
          positive: (11.1, 10.9),
          implicit_mult_prefix: (10, 10),
-         frac_div: (10.1, 9.9),
+         frac_div: (10, 10),
          weak_sqrt: (11.1, 8.9),
          weak_sin: (11.1, 8.9),
          weak_cos: (11.1, 8.9),
