@@ -6,6 +6,7 @@ def display():
     print("          'prec N' : set working precision to 10^(-N), i.e. N decimal places")
     print("          'disp N' : set final display precision to N decimal places")
     print("          'frac N' : set length limit for fractions to be displayed")
+    print("          'debug [on/off]' : debug mode shows calculation steps")
     print()
     print("Some features / things to try")
     print("─────────────────────────────")
