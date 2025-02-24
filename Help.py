@@ -53,3 +53,4 @@ def display():
     print("Logical: &&, ||")
     print("Equality: ==, !=")
     print("Relational: <, <=, >, >=")
+    print()
