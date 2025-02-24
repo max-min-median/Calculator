@@ -27,10 +27,11 @@ def main():
                 import Help
                 Help.display()
             elif m := re.match(r'\s*vars\s*', inp):
-                print("User-defined Variables")
+                print("\nUser-defined Variables")
                 print("──────────────────────")
                 for k in main_mem._vars:
-                    print(f'{k} = {main_mem._vars[k].value()}', end='\n')
+                    print(f'{k} = {main_mem._vars[k].value()}')
+                print()
             elif m := re.match(r'\s*del\s(.*)$', inp):
                 print("Deleted: " + main_mem.delete(m.group(1)), end='\n\n')
             elif m := re.match(r'\s*frac\s(\d+)$', inp):
