@@ -1,7 +1,7 @@
 def display():
     print()
     print("This calculator was made to perform quick algebraic calculations. Its main feature is flexible and 'loose' parsing of algebraic expressions, much like how one would write them out.")
-    print("Commands: 'var' : display variables")
+    print("Commands: 'vars' : display variables")
     print("          'del <v1> <v2> ...' : delete variables")
     print("          'prec N' : set working precision to 10^(-N), i.e. N decimal places")
     print("          'disp N' : set final display precision to N decimal places")
@@ -30,7 +30,7 @@ def display():
     print("∙> pir^2  [evaluated as pi∙r^2, unless a variable 'pir' also exists, in which case it would be (pir)^2]")
     print("∙> a = b = c = ab = bc = ac = abc = 1; abc  [multiple possible parses will trigger a warning]")
     print()
-    print("You can define your own functions. Use 'var' to see some preset functions.")
+    print("You can define your own functions. Use 'vars' to see some preset functions.")
     print("∙> square(x) = x^2")
     print("∙> quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)  [quadratic solver]")
     print("∙> hero(a, b, c) = sqrt((a + b + c)(a + b - c)(b + c - a)(c + a - b)/16)  [Hero's formula for area of triangles]")

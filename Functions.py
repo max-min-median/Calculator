@@ -72,9 +72,9 @@ class FuncComposition(Function):
         self.name = ''.join([fn.name for fn in func_list])
         self.func_list = list(func_list)
         self.function = self.invoke
-    
-    def invoke(self, tup_or_expr, mem=None, debug=False):
+
+    def invoke(self, tup_or_expr, mem=None, epsilon=None, debug=False):
         res = tup_or_expr
         for fn in self.func_list[::-1]:
-            res = fn.invoke(res, mem=mem, debug=debug)
+            res = fn.invoke(res, mem=mem, epsilon=epsilon, debug=debug)
         return res
