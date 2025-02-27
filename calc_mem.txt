@@ -5,6 +5,7 @@ poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 
 poisspdf(lambda, x) = e^-lambda lambda^x / x!
 collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) || collatz(n/2))
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
+alpha = 40434590983273161145246903140/6035225102738740780868792839
 delta = 1/10000000000000000000
 sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
 toDeg = 70300770108641676/1226979905083409
@@ -13,6 +14,7 @@ grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) /
 hero(a, b, c) = sqrt((a + b + c)(a + b - c)(b + c - a)(c + a - b)/16)
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 abs(x) = x > 0 && x || -x
+ans = 92
 deg = 1226979905083409/70300770108641676
 fib(n) = n == 1 || n > 1 && fib(n - 1) + fib(n - 2) || 0
 hyp(a, b) = sqrt(a^2 + b^2)

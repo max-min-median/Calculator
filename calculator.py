@@ -5,24 +5,22 @@ from Parser import parse
 from Numbers import Number
 from Settings import Settings
 from pathlib import Path
-import sys
+import sys, re
 
 # class Calculator:
 #     def __init__(self):
 #         self.mem = Memory()
 
 def main():
-    print("Calculator v1.3.3-beta by max_min_median")
+    print("Calculator v1.4.0-beta by max_min_median")
     print("(type 'help' for a quick tutorial)\n")
     basedir = Path(__file__).resolve().parent
-    settings_file = basedir / 'calc_settings.txt'
-    mem_file = basedir / 'calc_mem.txt'
-    settings = Settings(settings_file)
-    main_mem = Memory(mem_file, settings)
+    settings = Settings(basedir/'calc_settings.txt')
+    main_mem = Memory(basedir/'calc_mem.txt', settings)
     working_epsilon = Number(1, 10 ** settings.get('working_precision'), fcf=False)
     final_epsilon = Number(1, 10 ** settings.get('final_precision'), fcf=False)
     current_ver = main_mem._vars_version
-    import re
+
     while True:
         try:
             inp = input(prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
@@ -56,11 +54,15 @@ def main():
                 print(f"debug -> {settings.get('debug')}\n")
             elif inp.strip() == '':
                 continue
+            elif m := re.match(r'(?:=|sto(?:re)? |->)\s*([A-Za-z]\w*)', inp):
+                main_mem.add(m.group(1), main_mem.get('ans'))
+                print(f'{m.group(1)} = {main_mem.get(m.group(1)).value()}\n')
             else:
                 expr = parse(inp, debug=False)
                 if expr is None: continue
                 val = expr.value(main_mem, working_epsilon, debug=settings.get('debug'))
                 if isinstance(val, Number): val = val.fast_continued_fraction(epsilon=final_epsilon)
+                main_mem.add('ans', val)
                 print(val.disp(settings.get('frac_max_length'), settings.get('final_precision')), end="\n\n")
             if main_mem._vars_version != current_ver:
                 main_mem.save("calc_mem.txt")
