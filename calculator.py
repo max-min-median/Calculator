@@ -4,6 +4,7 @@ from Errors import *
 from Parser import parse
 from Numbers import Number
 from Settings import Settings
+from pathlib import Path
 import sys
 
 # class Calculator:
@@ -11,10 +12,13 @@ import sys
 #         self.mem = Memory()
 
 def main():
-    print("Calculator v1.3.2-beta by max_min_median")
+    print("Calculator v1.3.3-beta by max_min_median")
     print("(type 'help' for a quick tutorial)\n")
-    settings = Settings('calc_settings.txt')
-    main_mem = Memory('calc_mem.txt', settings)
+    basedir = Path(__file__).resolve().parent
+    settings_file = basedir / 'calc_settings.txt'
+    mem_file = basedir / 'calc_mem.txt'
+    settings = Settings(settings_file)
+    main_mem = Memory(mem_file, settings)
     working_epsilon = Number(1, 10 ** settings.get('working_precision'), fcf=False)
     final_epsilon = Number(1, 10 ** settings.get('final_precision'), fcf=False)
     current_ver = main_mem._vars_version
