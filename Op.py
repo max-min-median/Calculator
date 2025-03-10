@@ -156,7 +156,10 @@ def arctan_fn(x, epsilon=None, **kwargs):
 def assignment_fn(L, R, mem=None, **kwargs):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
-    mem.add(L.name, R)
+    if isinstance(mem, dict):
+        mem[L.name] = R
+    else:
+        mem.add(L.name, R)
     return R
 
 assignment = Infix(' = ', assignment_fn)
@@ -226,12 +229,6 @@ regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
          r'\s*(&&)\s*': logical_and,
          r'\s*(\|\|)\s*': logical_or,
          r'\s*(=)\s*': assignment,
-         # r'\s*(,)\s*': comma_separator,
-        #  r'\s*(sin)(?:\s+|(?![A-Za-z_]))': sin,
-        #  r'\s*(cos)(?:\s+|(?![A-Za-z_]))': cos,
-        #  r'\s*(tan)(?:\s+|(?![A-Za-z_]))': tan,
-        #  r'\s*(sqrt)(?:\s+|(?![A-Za-z_]))': sqrt,
-        #  r'\s*(ln)(?:\s+|(?![A-Za-z_]))': ln,
          r'(sin)\s+': weak_sin,
          r'(cos)\s+': weak_cos,
          r'(tan)\s+': weak_tan,

@@ -104,8 +104,8 @@ def validate(expr):
                 i -= 2
             # Numbers cannot follow space separators or evaluables
             case [_any_, Value() | Op.space_separator, Number()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression', expr.pos_of_elem(i))
-            # UR has to follow an evaluable
-            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken)): raise ParseError(f"Invalid operand for {str(lst[i])}", expr.pos_of_elem(i-1))
+            # UR has to follow an evaluable or other UR
+            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Invalid operand for {str(lst[i])}", expr.pos_of_elem(i-1))
             # UL cannot precede Bin, UR or None
             case [_any_, Prefix(), Infix() | Postfix() | None]: raise ParseError(f"Invalid operand for {str(lst[i])}", expr.pos_of_elem(i-1))
             case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != Op.assignment: raise ParseError(f"RValue cannot be the target of an assignment ", expr.pos_of_elem(i))

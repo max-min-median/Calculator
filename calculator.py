@@ -12,7 +12,7 @@ import sys, re
 #         self.mem = Memory()
 
 def main():
-    print("Calculator v1.4.0-beta by max_min_median")
+    print("Calculator v1.4.1-beta by max_min_median")
     print("(type 'help' for a quick tutorial)\n")
     basedir = Path(__file__).resolve().parent
     settings = Settings(basedir/'calc_settings.txt')
@@ -25,10 +25,10 @@ def main():
         try:
             inp = input(prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             # check for commands
-            if m := re.match(r'\s*help\s*', inp):
+            if m := re.match(r'^\s*help\s*$', inp):
                 import Help
                 Help.display()
-            elif m := re.match(r'\s*vars\s*', inp):
+            elif m := re.match(r'^\s*vars\s*$', inp):
                 print("\nUser-defined Variables")
                 print("──────────────────────")
                 for k in main_mem._vars:

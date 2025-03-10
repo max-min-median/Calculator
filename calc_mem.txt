@@ -1,3 +1,4 @@
+fibHelper(a, b, n) = n <= 1 && b || fibHelper(b, a + b, n - 1)
 binomcdf(n, p, a, b) = binompdf(n, p, a) + ((b > a) && binomcdf(n, p, a + 1, b))
 binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
@@ -5,17 +6,17 @@ poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 
 poisspdf(lambda, x) = e^-lambda lambda^x / x!
 collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) || collatz(n/2))
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
-alpha = 40434590983273161145246903140/6035225102738740780868792839
 delta = 1/10000000000000000000
 sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
+simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
 toDeg = 70300770108641676/1226979905083409
 area(a, b, c) = a * b * sin c / 2
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
-hero(a, b, c) = sqrt((a + b + c)(a + b - c)(b + c - a)(c + a - b)/16)
+hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 abs(x) = x > 0 && x || -x
-ans = 92
+ans = 620448401733239439360000
 deg = 1226979905083409/70300770108641676
-fib(n) = n == 1 || n > 1 && fib(n - 1) + fib(n - 2) || 0
+fib(n) = fibHelper(0, 1, n)
 hyp(a, b) = sqrt(a^2 + b^2)
 log(a, b) = ln b / ln a

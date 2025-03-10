@@ -91,7 +91,11 @@ class Expression(Value):
 
         match self.tokens[:3]:  # create new function
             case WordToken(), Expression(), Op.assignment:
-                mem.add(self.tokens[0].name, fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
+                if isinstance(mem, dict):
+                    name = self.tokens[0].name
+                    mem[name] = (fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
+                else:
+                    mem.add(self.tokens[0].name, fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
                 return fn
             
         self.parsed = self.parsed or (self.tokens + [None, None])
