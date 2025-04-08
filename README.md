@@ -3,9 +3,15 @@ This calculator started as an idea for a project for [REDACTED: name of a partic
 As such, the main feature of this calculator is its flexible parsing of algebraic expressions that one would key in much like how one would write them out.
 
 ## Installation
-Clone the repository and run the main file
-
-`python Calculator.py`
+1. Clone the repository.
+2. Install requirements.
+```
+pip install -r requirements.txt
+```
+3. Run Calculator.py
+```
+python Calculator.py
+```
 
 ## Commands
 | Command | Description |
