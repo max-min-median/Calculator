@@ -1,3 +1,5 @@
+(Deprecated, here for historical purposes :))
+
 Parsing Algorithm
 ─────────────────
 At any arbitrary point in the evaluation, we do this:

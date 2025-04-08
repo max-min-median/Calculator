@@ -158,7 +158,7 @@ def validate(tokens, pos_list, brackets=''):
 
 if __name__ == '__main__':
     from Memory import Memory
-    mem = Memory(test=True)
+    mem = Memory()
     exp1 = parse('25 - cos +3pi + (5 sqrt(4)) - 4abc + sqr', debug=True, mem=mem)
     print(str(exp1))
     parse('5P2 + (5)', mem=mem)

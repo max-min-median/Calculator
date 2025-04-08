@@ -15,10 +15,21 @@ class Memory:
     }
 
     top_list = {'sin': Op.sin,   # These override user vars
+                'cosec': Op.csc,
+                'csc': Op.csc,
                 'cos': Op.cos,
+                'sec': Op.sec,
                 'tan': Op.tan,
+                'cot': Op.cot,
+                'asin': Op.arcsin,
+                'arcsin': Op.arcsin,
+                'acos': Op.arccos,
+                'arccos': Op.arccos,
+                'atan': Op.arctan,
+                'arctan': Op.arctan,
                 'sqrt': Op.sqrt,
                 'ln': Op.ln,
+                'lg': Op.lg,
     }
 
     def __init__(self, settings, filename=None):
@@ -26,6 +37,7 @@ class Memory:
         self._vars_version = 0
         self._full_version = 0
         self._full = Memory.combine()
+        self.trie = None
         if filename is not None: self.load(filename, settings)
         # for testing
 
@@ -35,6 +47,7 @@ class Memory:
     def add(self, str, val):
         need_sort = True if str not in self._vars else False
         self._vars[str] = val
+        if self.trie is not None: self.trie.insert(str)
         if need_sort:
             self._vars = {k: self._vars[k] for k in sorted(self._vars, key=lambda x: (-len(x), x))}
         self._vars_version += 1
@@ -42,10 +55,14 @@ class Memory:
     def delete(self, string):
         str_list = string.replace(',', ' ').split()
         deleted = []
-        for str in str_list:
-            if str in self._vars: del self._vars[str]; deleted.append(str)
+        for s in str_list:
+            if s in self._vars:
+                del self._vars[s]
+                deleted.append(s)
+                if s not in self.base_list:
+                    self.trie.delete(s)
         if deleted: self._vars_version += 1
-        return ', '.join(deleted)
+        return deleted
     
     def save(self, filename):
         from Functions import Function, FuncComposition
@@ -86,5 +103,3 @@ class Memory:
 
     @property
     def own_list(self): return self._vars
-
-pass

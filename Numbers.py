@@ -75,13 +75,11 @@ class Number(Value):
 
     def simplify(self):
         div = math.gcd(self.numerator, self.denominator)
-        if self.denominator == 0: print(f'simplify({str(self)})1')
         self.numerator = self.numerator // div
         self.denominator = self.denominator // div
         return self
 
     def stern_brocot(self, epsilon=None, max_denom=math.inf):
-        print(f'Stern-brocot called on {str(self)}')
         if epsilon is None and max_denom == math.inf:
             raise NumberError("Stern-Brocot tree search requires at least 1 keyword argument: 'epsilon' or 'max_denom'")
         if epsilon is None: epsilon = Number(0)
@@ -90,7 +88,6 @@ class Number(Value):
         closest_frac, smallest_diff = Number(current, fcf=False), Number(1)
 
         while current[1] < max_denom:
-            print(current)
             diff = frac - Number(current, fcf=False)
             abs_diff = abs(diff)
             if abs_diff < smallest_diff:

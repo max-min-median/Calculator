@@ -1,3 +1,5 @@
+crossProduct(a, b, c, d, e, f) = (bf - ec, cd - af, ae - bd)
+dotProduct(a, b, c, d, e, f) = ad + be + cf
 fibHelper(a, b, n) = n <= 1 && b || fibHelper(b, a + b, n - 1)
 binomcdf(n, p, a, b) = binompdf(n, p, a) + ((b > a) && binomcdf(n, p, a + 1, b))
 binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
@@ -15,8 +17,15 @@ grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) /
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 abs(x) = x > 0 && x || -x
-ans = 620448401733239439360000
+ans = 109216786/38613965
 deg = 1226979905083409/70300770108641676
 fib(n) = fibHelper(0, 1, n)
 hyp(a, b) = sqrt(a^2 + b^2)
 log(a, b) = ln b / ln a
+a = 5
+f(x) = x^2 + 4
+g(x) = p sin(2pi/7 * (x - 17/4)) + q
+p = 24/17
+q = 9/17
+x = 2
+y = 3

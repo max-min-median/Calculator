@@ -8,11 +8,14 @@ e = Number('2.718281828459045235360287471353')
 pi = Number('3.1415926535897932384626433832795')
 ln2 = Number(1554903831458736, 2243252046704767, fcf=False)
 ln10 = Number(227480160645689, 98793378510888, fcf=False)
+zero = Number(0)
+one = Number(1)
+two = Number(2)
 
 def factorial_fn(n, **kwargs):
     if not n.is_int(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
     n = int(n)
-    if n in (0, 1): return Number(1)
+    if n in (0, 1): return one
     for i in range(2, n): n *= i
     return Number(n)
 
@@ -23,7 +26,7 @@ def combination_fn(n, r, perm=False, **kwargs):  # nCr
     if not n.is_int() or not r.is_int(): raise CalculatorError(f'Combination function expects integers')
     n, r = int(n), int(r)
     res = 1
-    if n in (0, 1): return Number(1)
+    if n in (0, 1): return one
     for i in range(1, r + 1): res *= n + 1 - i; res //= i ** (not perm)
     return Number(res)
 
@@ -34,8 +37,8 @@ def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
     # print(f'Exponentiation: {str(a)} ^ {str(b)}')
     if a.numerator == 0:
         if b.numerator == 0: raise CalculatorError(f'0^0 is undefined')
-        return Number(0)
-    if b.sign == -1: return Number(1) / exponentiation_fn(a, -b, *args, epsilon, fcf, **kwargs)
+        return zero
+    if b.sign == -1: return one / exponentiation_fn(a, -b, *args, epsilon, fcf, **kwargs)
     if b.is_int(): return int_power(a, int(b), epsilon=epsilon, fcf=fcf)
     if a.sign == -1: raise CalculatorError(f'Cannot raise a negative number {str(a)} to a fractional power {str(b)}')
     # a^b = e^(b ln a)
@@ -44,18 +47,18 @@ def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
 def int_power(base, power, *args, epsilon=None, fcf=False, **kwargs):
     if not isinstance(power, int): raise CalculatorError(f'int_power() expects integral power, received {power}')
     pow = abs(power)
-    int_part = Number(1)
+    int_part = one
     while pow > 0:
         if pow & 1: int_part *= base
         base = (base * base).fast_continued_fraction(epsilon=epsilon)
         pow >>= 1
     if power & 1 == 1 and base.sign == -1: int_part = -int_part
-    return (Number(1) / int_part if power < 0 else int_part).fast_continued_fraction(epsilon=epsilon)
+    return (one / int_part if power < 0 else int_part).fast_continued_fraction(epsilon=epsilon)
 
 def exp(x, *args, epsilon=None, fcf=False, **kwargs):
     int_part = int_power(e, int(x), epsilon=epsilon)
     x = x.frac_part()
-    sum = term = i = Number(1)
+    sum = term = i = one
     while (abs(term) >= epsilon):
         term = (term * x) / i
         sum += term
@@ -74,7 +77,7 @@ def exp(x, *args, epsilon=None, fcf=False, **kwargs):
 
 def ln_fn(x, epsilon=None, **kwargs):
     if x <= 0: raise CalculatorError(f'ln can only apply to a positive number.')
-    if x < 1: return -ln_fn(Number(1) / x, epsilon=epsilon, **kwargs)
+    if x < 1: return -ln_fn(one / x, epsilon=epsilon, **kwargs)
     ln2s = ln10s = 0
     while x > 10:
         x /= 10
@@ -82,8 +85,8 @@ def ln_fn(x, epsilon=None, **kwargs):
     while x > 2:
         x /= 2
         ln2s += 1
-    x0 = Number(0)
-    delta_x = epsilon * Number(2)
+    x0 = zero
+    delta_x = epsilon * two
     while abs(delta_x) > epsilon:
         delta_x = x / exp(x0, epsilon=epsilon) - 1
         x0 = (x0 + delta_x).fast_continued_fraction(epsilon=epsilon)
@@ -97,8 +100,7 @@ def sin_fn(x, epsilon=None, **kwargs):
     elif x > pi / 2: return sin_fn(pi - x, epsilon=epsilon, **kwargs)
     sum = x_pow = delta_x = x
     x_sq = -x * x
-    mul = Number(1)
-    fac = Number(1)
+    mul = fac = one
     while abs(delta_x) > epsilon:
         mul += 2
         fac *= mul * (mul - 1)
@@ -112,6 +114,15 @@ def cos_fn(x, epsilon=None, **kwargs):
 
 def tan_fn(x, epsilon=None, **kwargs):
     return sin_fn(x, epsilon=epsilon, **kwargs) / cos_fn(x, epsilon=epsilon, **kwargs)
+
+def sec_fn(x, epsilon=None, **kwargs):
+    return one / cos_fn(x, epsilon=epsilon, **kwargs)
+
+def csc_fn(x, epsilon=None, **kwargs):
+    return one / sin_fn(x, epsilon=epsilon, **kwargs)
+
+def cot_fn(x, epsilon=None, **kwargs):
+    return one / tan_fn(x, epsilon=epsilon, **kwargs)
 
 def arcsin_fn(x, epsilon=None, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
@@ -192,6 +203,9 @@ function_composition = Infix('', lambda x, y, *args, **kwargs: x.invoke(y, *args
 sin = Prefix('sin', sin_fn)
 cos = Prefix('cos', cos_fn)
 tan = Prefix('tan', tan_fn)
+sec = Prefix('sec', sec_fn)
+csc = Prefix('csc', csc_fn)
+cot = Prefix('cot', cot_fn)
 arcsin = Prefix('asin', arcsin_fn)
 arccos = Prefix('acos', arccos_fn)
 arctan = Prefix('atan', arctan_fn)
@@ -200,6 +214,9 @@ lg = Prefix('lg', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsi
 weak_sin = Prefix('sin ', sin_fn)
 weak_cos = Prefix('cos ', cos_fn)
 weak_tan = Prefix('tan ', tan_fn)
+weak_sec = Prefix('sec', sec_fn)
+weak_csc = Prefix('csc', csc_fn)
+weak_cot = Prefix('cot', cot_fn)
 weak_arcsin = Prefix('asin ', arcsin_fn)
 weak_arccos = Prefix('acos ', arccos_fn)
 weak_arctan = Prefix('atan ', arctan_fn)
@@ -232,6 +249,9 @@ regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
          r'(sin)\s+': weak_sin,
          r'(cos)\s+': weak_cos,
          r'(tan)\s+': weak_tan,
+         r'(sec)\s+': weak_sec,
+         r'(csc|cosec)\s+': weak_csc,
+         r'(cot)\s+': weak_cot,
          r'(arcsin|asin)\s+': weak_arcsin,
          r'(arccos|acos)\s+': weak_arccos,
          r'(arctan|atan)\s+': weak_arctan,
@@ -241,6 +261,9 @@ regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
          r'(sin)(?![A-Za-z_])': sin,
          r'(cos)(?![A-Za-z_])': cos,
          r'(tan)(?![A-Za-z_])': tan,
+         r'(sec)(?![A-Za-z_])': sec,
+         r'(csc|cosec)(?![A-Za-z_])': csc,
+         r'(cot)(?![A-Za-z_])': cot,
          r'(arcsin|asin)(?![A-Za-z_])': arcsin,
          r'(arccos|acos)(?![A-Za-z_])': arccos,
          r'(arctan|atan)(?![A-Za-z_])': arctan,
@@ -273,6 +296,9 @@ power = {
          sin: (11.1, 10.9),
          cos: (11.1, 10.9),
          tan: (11.1, 10.9),
+         sec: (11.1, 10.9),
+         csc: (11.1, 10.9),
+         cot: (11.1, 10.9),
          arcsin: (11.1, 10.9),
          arccos: (11.1, 10.9),
          arctan: (11.1, 10.9),
@@ -281,11 +307,14 @@ power = {
          negative: (11.1, 10.9),
          positive: (11.1, 10.9),
          implicit_mult_prefix: (10, 10),
-         frac_div: (10, 10),
+         frac_div: (9.5, 9.5),
          weak_sqrt: (11.1, 8.9),
          weak_sin: (11.1, 8.9),
          weak_cos: (11.1, 8.9),
          weak_tan: (11.1, 8.9),
+         weak_sec: (11.1, 8.9),
+         weak_csc: (11.1, 8.9),
+         weak_cot: (11.1, 8.9),
          weak_arcsin: (11.1, 8.9),
          weak_arccos: (11.1, 8.9),
          weak_arctan: (11.1, 8.9),

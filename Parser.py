@@ -14,7 +14,7 @@ def parse(s, start_pos=0, brackets='', parent=None, debug=False):
         if t is not None:
             tokens.append(t)
             pos_list.append(tuple(pos + x for x in m.span(1)))
-            debug and print(f'{tuple(start_pos + x for x in pos_list[-1])}: {t}')
+            # debug and print(f'{tuple(start_pos + x for x in pos_list[-1])}: {t}')
         if m is not None:
             pos += m.span()[1]
 
@@ -116,7 +116,7 @@ def validate(expr):
 # test code
 if __name__ == '__main__':
     from Memory import Memory
-    mem = Memory(test=True)
+    mem = Memory()
 
     def test_func():
         exp1 = parse('f(xab, xac) = 2 + 3', debug=True)

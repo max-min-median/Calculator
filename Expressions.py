@@ -68,9 +68,9 @@ class Expression(Value):
                     # Fn-Fn : High
                     case Function(), Expression():
                         token = Op.function_invocation
-                    case Value(), Function() | Prefix() | Expression() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
-                        token = Op.implicit_mult_prefix  # implicit mult of value to prefix, slightly lower precedence
-                    case Value(), Value():
+                    case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
+                        token = Op.implicit_mult_prefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
+                    case Value(), Value() | Expression():
                         token = Op.implicit_mult
                 match token:
                     case Operator() if token.power[0] <= power: return L, index - 1
