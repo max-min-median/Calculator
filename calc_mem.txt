@@ -17,12 +17,11 @@ grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) /
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 abs(x) = x > 0 && x || -x
-ans = 109216786/38613965
+dotProduct(a, b, c, d, e, f) = ad + be + cf
 deg = 1226979905083409/70300770108641676
 fib(n) = fibHelper(0, 1, n)
 hyp(a, b) = sqrt(a^2 + b^2)
 log(a, b) = ln b / ln a
-a = 5
 f(x) = x^2 + 4
 g(x) = p sin(2pi/7 * (x - 17/4)) + q
 p = 24/17

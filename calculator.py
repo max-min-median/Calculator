@@ -84,11 +84,11 @@ def main():
                 main_mem.add('ans', val)
                 ui.addText((val.disp(settings.get('frac_max_length'), settings.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK)).redraw()
             if main_mem._vars_version != current_ver:
-                main_mem.save("calc_mem.txt")
+                main_mem.save(basedir/'calc_mem.txt')
                 current_ver = main_mem._vars_version
         except CalculatorError as e:
             if len(e.args) > 1: ui.addText((' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
-            ui.addText((f"{repr(e).split("(")[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))
+            ui.addText((f"{repr(e).split('(')[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))
             ui.redraw()
             # raise e
         except ZeroDivisionError:
