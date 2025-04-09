@@ -10,6 +10,7 @@ system = platform.system()
 
 try:
     import keyboard
+    keyboard.is_pressed(29)  # start up `keyboard` listener
 except ImportError:
     keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
 
@@ -69,7 +70,6 @@ class UI:
         curses.update_lines_cols()
         self.cursesInit()
         curses.use_default_colors()
-        keyboard.is_pressed(29)  # start up `keyboard` listener
 
         if UI.pairIdx is None:
             UI.pairIdx = 0
@@ -90,10 +90,12 @@ class UI:
 
         self.quickExponents = True
         self.mem = memory
-        self.statusDuration = -1
+        self.statusDuration = 0
+        # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
         self.prompt = (("♦", UI.BRIGHT_ORANGE_ON_BLACK), (">", UI.DIM_ORANGE_ON_BLACK), (" "))
         self.text = {"display": [], "status": [[]], "input": []}
         self.selectionAnchor = None
+        self.pos = 0
         self.setupWindows()
 
 
@@ -126,64 +128,36 @@ class UI:
             else:
                 self.text["status"] = [[("No clipboard utility found. Install xclip or xsel."[:self.stdscr.getmaxyx()[1] - 3], UI.BRIGHT_RED_ON_BLACK)]]
                 self.statusDuration = 1
-                self.useWin("status").redraw()
+                self.redraw("status")
                 self.subwins["status"].refresh()
 
 
     def setupWindows(self) -> dict[str, curses.window]:
         os.system("cls" if os.name == "nt" else "clear")
         self.stdscr.erase()
-        ht, wd = self.stdscr.getmaxyx()
-        if ht < 17 or wd < 44:
-            if ht > 3 and wd > 15:
-                self.stdscr.addstr(ht // 2, wd // 2 - 6, "Too small :(")
+        self.ht, self.wd = self.stdscr.getmaxyx()
+        if self.ht < 17 or self.wd < 44:
+            if self.ht > 3 and self.wd > 15:
+                self.stdscr.addstr(self.ht // 2, self.wd // 2 - 6, "Too small :(")
                 self.stdscr.refresh()
             return False
-        self.stdscr.addstr(0, (wd - len(s := "MaxCalc v2.0.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
+        self.stdscr.addstr(0, (self.wd - len(s := "MaxCalc v2.0.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
         self.subwins = {}
-        self.stdscr.subwin(ht * 3 // 4, wd, 1, 0).box()  # rows, cols, startrow, startcol
-        self.subwins["display"] = self.stdscr.subwin(ht * 3 // 4 - 2, wd - 2, 2, 1)
+        self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
+        self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
         self.subwins["display"].leaveok(True)
         self.subwins["display"].scrollok(True)
         # self.stdscr.subwin(ht // 3, wd, ht // 3, 0).box()
-        self.subwins["status"] = self.stdscr.subwin(1, wd - 2, ht * 3 // 4 + 1, 1)
+        self.subwins["status"] = self.stdscr.subwin(1, self.wd - 2, self.ht * 3 // 4 + 1, 1)
         self.subwins["status"].leaveok(True)
         self.subwins["status"].scrollok(True)
-        self.useWin("status").addText(("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK)).redraw()
-        self.stdscr.subwin(ht - ht * 3 // 4 - 2, wd, ht * 3 // 4 + 2, 0).box()
-        self.subwins["input"] = self.stdscr.subwin(ht - ht * 3 // 4 - 4, wd - 2, ht * 3 // 4 + 3, 1)
+        self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
+        self.redraw("status")
+        self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
+        self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
         self.subwins["input"].leaveok(True)
         self.subwins["input"].scrollok(True)
         return self.subwins
-
-
-    def useWin(self, win):
-        self.currWin = win
-        return self
-
-
-    def erase(self):
-        self.subwins[self.currWin].erase()
-        return self
-
-
-    def cursyncup(self):
-        self.subwins[self.currWin].cursyncup()
-        return self
-
-
-    def move(self, *args):
-        self.subwins[self.currWin].move(*args)
-        return self
-
-
-    def refresh(self):
-        self.subwins[self.currWin].refresh()
-        return self
-
-
-    def getch(self):
-        return self.stdscr.getch()
 
 
     def getWordAtPos(self, text, pos):  # returns (currWord, wordL, wordR)
@@ -198,80 +172,32 @@ class UI:
 
     def getInput(self, trie: Trie=None):
         if trie is not None: self.trie = trie
-        # ht, wd = self.subwins["input"].getmaxyx()
         text = []
         nearestWords = []
-        pos = 0
-        wd = self.subwins["input"].getmaxyx()[1]
-        prevWord = None
+        self.pos = 0
+        self.currWord = self.prevWord = None
+        self.wordL, self.wordR = len(text), 0
         tabbed = False
-        # self.useWin("input").cursyncup().refresh()
+        self.drawInput(text)
 
         while True:
 
-            # detect word on cursor position
-            currWord, wordL, wordR = self.getWordAtPos(text, pos)
-            self.text["input"] = []
-
-            # print input
-            selectL, selectR = sorted([self.selectionAnchor, pos]) if self.selectionAnchor is not None else (len(text), 0)
-            self.useWin("input").addText(*self.prompt)
-
-            # 1. print left part
-            self.addText((''.join(text[:min(wordL, selectL)]), ), startNewLine=False)
-            # 2. print from left end of selection to left end of autocomplete
-            self.addText((''.join(text[selectL:min(wordL, selectR)]), UI.WHITE_ON_BLUE), startNewLine=False)
-            # 3. print from left end of autocomplete to left end of selection
-            self.addText((''.join(text[wordL:min(selectL, wordR)]), UI.YELLOW_ON_BLACK), startNewLine=False)
-            # 4. print overlap of selection and autocomplete
-            self.addText((''.join(text[max(selectL, wordL):min(selectR, wordR)]), UI.YELLOW_ON_BLUE), startNewLine=False)
-            # 5. print from right end of selection to right end of autocomplete
-            self.addText((''.join(text[max(selectL, selectR):wordR]), UI.YELLOW_ON_BLACK), startNewLine=False)
-
-            # autocomplete
+            key = self.stdscr.getch()
             if self.statusDuration > 0:
                 self.statusDuration -= 1
-            elif prevWord != currWord or self.statusDuration == 0:
-                self.statusDuration = -1
-                self.text["status"] = [[]]
-                self.useWin("status")
-                if currWord:
-                    nearestWords = self.trie.nearestAutocomplete(currWord)
-                    tabbed = False
-                    # print status/autocomplete bar
-                    spaces = ''
-                    while len('   '.join(nearestWords)) >= wd:
-                        nearestWords.pop()
-                    for word in nearestWords:
-                        self.addText((spaces, ), (word[:len(currWord)], UI.GREEN_ON_BLACK), (word[len(currWord):], UI.GREY_ON_BLACK), startNewLine=False)
-                        spaces = '   '
-                else:
-                    nearestWords = []
-                self.redraw()
-                prevWord = currWord
-
-            self.useWin("input")
-            if nearestWords:
-                casefunc = str.upper if currWord.isupper() else lambda x: x
-                if tabbed is False: self.addText((casefunc(nearestWords[0][len(currWord):]), UI.GREY_ON_BLUE if selectL <= wordR < selectR else UI.GREY_ON_BLACK), startNewLine=False)
-                else: self.addText((casefunc(nearestWords[tabbed][len(currWord):]), UI.YELLOW_ON_BLACK), startNewLine=False)
-
-            # 6. print from right end of autocomplete to right end of selection
-            self.addText((''.join(text[max(wordR, wordL):selectR]), UI.WHITE_ON_BLUE), startNewLine=False)
-            # 7. print right part
-            self.addText((''.join(text[max(wordR, selectR, min(wordL, selectL)):]), ), startNewLine=False)
-
-            # self.useWin("display").addstr(f"{self.stdscr.getmaxyx()} Key: {key} Str: {''.join(text)}\n").refresh()
-            curses.curs_set(0)
-            self.useWin("input").move(*divmod(len(self.prompt) + (pos if tabbed is False else wordL + len(nearestWords[tabbed])), wd)).cursyncup().redraw()
-            self.useWin("input").redraw()
-            curses.curs_set(1)
-            curses.doupdate()
-
-            key = self.getch()
+                if self.statusDuration == 0: self.redraw("status")
             if (keyCombo := UI.keymap[system].get(key, None)): key = keyCombo["key"]
             shiftPressed = keyCombo is not None and "shift" in keyCombo["modifiers"] or keyboard.is_pressed(42) or keyboard.is_pressed(54)
             ctrlPressed = keyCombo is not None and "ctrl" in keyCombo["modifiers"] or keyboard.is_pressed(29)
+
+            if key == 55 and (shiftPressed or keyboard.is_pressed(71)): key = curses.KEY_HOME
+            elif key == 49 and (shiftPressed or keyboard.is_pressed(79)): key = curses.KEY_END
+
+            # Resolve tabbed state if the current key is not a tab or resize
+            if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
+                text[self.wordL:self.wordR] = [*self.currWord + nearestWords[tabbed][len(self.currWord):]]
+                self.pos = self.wordL + len(nearestWords[tabbed])
+                tabbed = False
 
             if key == curses.KEY_RESIZE:
                 if not self.setupWindows():
@@ -280,117 +206,152 @@ class UI:
                         curses.update_lines_cols()
                         if self.setupWindows():
                             break
+                self.redraw("display")
 
-                wd = self.subwins["input"].getmaxyx()[1]
-                self.useWin("display").redraw()
-                continue
-
-            if key == 1:  # Ctrl-A
+            elif key == 1:  # Ctrl-A
                 self.selectionAnchor = 0
-                pos = len(text)
-                continue
-
-            if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
-                text[wordL:wordR] = [*currWord + casefunc(nearestWords[tabbed][len(currWord):])]
-                pos = wordL + len(nearestWords[tabbed])
-                tabbed = False
-
-            if key == 55 and (shiftPressed or keyboard.is_pressed(71)): key = curses.KEY_HOME
-            elif key == 49 and (shiftPressed or keyboard.is_pressed(79)): key = curses.KEY_END
-
-            if key in (curses.KEY_BACKSPACE, 8, 127, curses.KEY_DC, 24) and self.selectionAnchor is not None:
-                selectL, selectR = sorted([self.selectionAnchor, pos])
+                self.pos = len(text)
+            elif key in (curses.KEY_BACKSPACE, 8, 127, curses.KEY_DC, 24) and self.selectionAnchor is not None:
+                selectL, selectR = sorted([self.selectionAnchor, self.pos])
                 if key == 24: self.copyToClipboard(''.join(text[selectL:selectR]))
                 text[selectL:selectR] = []
-                pos = selectL
+                self.pos = selectL
                 self.selectionAnchor = None
             elif key == 127:
                 curses.ungetch(curses.KEY_BACKSPACE)
                 curses.ungetch(1001)
-            elif key in (curses.KEY_BACKSPACE, 8) and pos > 0:
-                pos -= 1
-                text[pos:pos+1] = []
-            elif key == curses.KEY_DC and pos < len(text):
-                text[pos:pos+1] = []
+            elif key in (curses.KEY_BACKSPACE, 8) and self.pos > 0:
+                self.pos -= 1
+                text[self.pos:self.pos+1] = []
+            elif key == curses.KEY_DC and self.pos < len(text):
+                text[self.pos:self.pos+1] = []
             elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_UP, curses.KEY_DOWN, curses.KEY_HOME, curses.KEY_END):
                 if shiftPressed:
-                    if self.selectionAnchor is None: self.selectionAnchor = pos
+                    if self.selectionAnchor is None: self.selectionAnchor = self.pos
                 else:
                     self.selectionAnchor = None
                 if key == curses.KEY_LEFT:
-                    pos -= 1
+                    self.pos -= 1
                     if ctrlPressed:
-                        while pos > 0 and (not UI.isWordChar(text[pos]) or UI.isWordChar(text[pos-1])): pos -= 1
+                        while self.pos > 0 and (not UI.isWordChar(text[self.pos]) or UI.isWordChar(text[self.pos-1])): self.pos -= 1
                 elif key == curses.KEY_RIGHT:
-                    pos += 1
+                    self.pos += 1
                     if ctrlPressed:
-                        while pos < len(text) and (not UI.isWordChar(text[pos-1]) or pos < len(text) and UI.isWordChar(text[pos])): pos += 1
-                elif key == curses.KEY_UP: pos -= wd
-                elif key == curses.KEY_DOWN: pos += wd
-                elif key == curses.KEY_HOME: pos = 0
-                elif key == curses.KEY_END: pos = len(text)
-                pos = min(len(text), max(pos, 0))
-                if self.selectionAnchor == pos: self.selectionAnchor = None
+                        while self.pos < len(text) and (not UI.isWordChar(text[self.pos-1]) or self.pos < len(text) and UI.isWordChar(text[self.pos])): self.pos += 1
+                elif key == curses.KEY_UP: self.pos -= self.wd - 2
+                elif key == curses.KEY_DOWN: self.pos += self.wd - 2
+                elif key == curses.KEY_HOME: self.pos = 0
+                elif key == curses.KEY_END: self.pos = len(text)
+                self.pos = min(len(text), max(self.pos, 0))
+                if self.selectionAnchor == self.pos: self.selectionAnchor = None
             elif key in (9, 351):  # TAB
                 self.selectionAnchor = None
                 if not nearestWords: continue
-                if tabbed is False: tabbed = ((nearestWords[0] == currWord) if key == 9 else -1) % len(nearestWords)
+                if tabbed is False: tabbed = ((nearestWords[0] == self.currWord) if key == 9 else -1) % len(nearestWords)
                 else: tabbed = (tabbed + (1 if key == 9 else -1)) % len(nearestWords)
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
-                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and pos > 0 and (text[pos - 1] in ')]}' or wordR == pos and not isinstance(self.mem.get(currWord), (Function, Operator))) else '') + chr(key))]
+                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Function, Operator))) else '') + chr(key))]
                 
                 if self.selectionAnchor is not None:
-                    selectL, selectR = sorted([self.selectionAnchor, pos])
+                    selectL, selectR = sorted([self.selectionAnchor, self.pos])
                     text[selectL:selectR] = typed
-                    pos = selectL + len(typed)
+                    self.pos = selectL + len(typed)
                     self.selectionAnchor = None
                 else:
-                    text[pos:pos] = typed
-                    pos += len(typed)
+                    text[self.pos:self.pos] = typed
+                    self.pos += len(typed)
             elif key in (curses.KEY_ENTER, 10, 13, 459):  # Enter
                 result = ''.join(text).strip()
                 if result:
-                    self.useWin("status").erase().refresh()
-                    self.useWin("display")
-                    if len(self.text["display"]) > 0: self.addText()
-                    self.addText(*self.prompt, (result, ))
+                    self.subwins["status"].erase()
+                    self.subwins["status"].refresh()
+                    if len(self.text["display"]) > 0: self.addText("display")
+                    self.addText("display", *self.prompt, (result, ))
                     return result
                 # ignore empty input
                 text = []
-                pos = 0
+                self.pos = 0
             elif key == 3:
                 if self.selectionAnchor is not None:
-                    selectL, selectR = sorted([self.selectionAnchor, pos])
+                    selectL, selectR = sorted([self.selectionAnchor, self.pos])
                     self.copyToClipboard(''.join(text[selectL:selectR]))
             elif key == 27:
                 raise KeyboardInterrupt("Esc")
+            
+            self.currWord, self.wordL, self.wordR = self.getWordAtPos(text, self.pos)
+            if self.prevWord != self.currWord:
+                self.text["status"] = [[]]
+                self.prevWord = self.currWord
+                if self.currWord:
+                    nearestWords = self.trie.nearestAutocomplete(self.currWord)
+                    tabbed = False
+                    # update text of status/autocomplete bar
+                    spaces = ''
+                    while len('   '.join(nearestWords)) >= self.wd:
+                        nearestWords.pop()
+                    for word in nearestWords:
+                        self.addText("status", (spaces, ), (word[:len(self.currWord)], UI.GREEN_ON_BLACK), (word[len(self.currWord):], UI.GREY_ON_BLACK), startNewLine=False)
+                        spaces = '   '
+                else:
+                    nearestWords = []
+                if self.statusDuration == 0: self.redraw("status")
+
+            self.drawInput(text, tabbed, nearestWords)
 
 
-    def addText(self, *strAndAttrTuples, startNewLine=True):
+    def drawInput(self, text, tabbed=False, nearestWords=[]):  # adds the correct text to self.text["input"]
+        # print input
+        selectL, selectR = sorted([self.selectionAnchor, self.pos]) if self.selectionAnchor is not None else (len(text), 0)
+        self.text["input"].clear()
+        self.addText("input", *self.prompt)
+
+        # 1. print left part
+        self.addText("input", (''.join(text[:min(self.wordL, selectL)]), ), startNewLine=False)
+        # 2. print from left end of selection to left end of autocomplete
+        self.addText("input", (''.join(text[selectL:min(self.wordL, selectR)]), UI.WHITE_ON_BLUE), startNewLine=False)
+        # 3. print from left end of autocomplete to left end of selection
+        self.addText("input", (''.join(text[self.wordL:min(selectL, self.wordR)]), UI.YELLOW_ON_BLACK), startNewLine=False)
+        # 4. print overlap of selection and autocomplete
+        self.addText("input", (''.join(text[max(selectL, self.wordL):min(selectR, self.wordR)]), UI.YELLOW_ON_BLUE), startNewLine=False)
+        # 5. print from right end of selection to right end of autocomplete
+        self.addText("input", (''.join(text[max(selectL, selectR):self.wordR]), UI.YELLOW_ON_BLACK), startNewLine=False)
+
+        if nearestWords:
+            if tabbed is False: self.addText("input", (nearestWords[0][len(self.currWord):], UI.GREY_ON_BLUE if selectL <= self.wordR < selectR else UI.GREY_ON_BLACK), startNewLine=False)
+            else: self.addText("input", (nearestWords[tabbed][len(self.currWord):], UI.YELLOW_ON_BLACK), startNewLine=False)
+
+        # 6. print from right end of autocomplete to right end of selection
+        self.addText("input", (''.join(text[max(self.wordR, self.wordL):selectR]), UI.WHITE_ON_BLUE), startNewLine=False)
+        # 7. print right part
+        self.addText("input", (''.join(text[max(self.wordR, selectR, min(self.wordL, selectL)):]), ), startNewLine=False)
+
+        # self.useWin("display").addstr(f"{self.stdscr.getmaxyx()} Key: {key} Str: {''.join(text)}\n").refresh()
+        curses.curs_set(0)
+        self.subwins["input"].move(*divmod(len(self.prompt) + (self.pos if tabbed is False else self.wordL + len(nearestWords[tabbed])), self.wd - 2))
+        self.subwins["input"].cursyncup()
+        self.redraw("input")
+        curses.curs_set(1)
+        curses.doupdate()
+
+
+    def addText(self, windowName, *strAndAttrTuples, startNewLine=True):
         if startNewLine:
-            self.text[self.currWin].append([])
-        self.text[self.currWin][-1] += strAndAttrTuples
+            self.text[windowName].append([])
+        self.text[windowName][-1] += strAndAttrTuples
         return self
 
 
-    def redraw(self, window=None):
-        if window is not None: self.useWin(window)
-        self.erase()
+    def redraw(self, windowName):  # does not call doupdate
+        window = self.subwins[windowName]
+        window.erase()
         firstLine = True
-        for line in self.text[self.currWin]:
-            if not firstLine: self.subwins[self.currWin].addstr('\n')
+        for line in self.text[windowName]:
+            if not firstLine: window.addstr('\n')
             firstLine = False
             for item in line:
-                self.subwins[self.currWin].addstr(*item)
-        self.subwins[self.currWin].noutrefresh()
-
-
-    def addPrompt(self):
-        # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
-        for charAndAttrs in self.prompt:
-            self.subwins[self.currWin].addstr(*charAndAttrs)
-        return self
+                window.addstr(*item)
+        window.noutrefresh()
 
 
     def end(self):
