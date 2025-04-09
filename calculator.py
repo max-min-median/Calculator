@@ -6,9 +6,7 @@ from Numbers import Number
 from Settings import Settings
 from pathlib import Path
 import sys, re
-import curses
 from UI import *
-import signal
 
 # class Calculator:
 #     def __init__(self):
@@ -99,6 +97,7 @@ def main():
             ui.redraw()
         except (EOFError, KeyboardInterrupt):
             break
+    ui.end()
 
 if __name__ == '__main__':
     sys.setrecursionlimit(500000)

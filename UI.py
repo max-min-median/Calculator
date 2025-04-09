@@ -1,5 +1,4 @@
 import curses
-import keyboard
 import os
 import platform
 import subprocess
@@ -7,11 +6,47 @@ from Trie import Trie
 from Functions import Function
 from Operators import Operator
 
+system = platform.system()
+
+try:
+    import keyboard
+except ImportError:
+    keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
+
+# - history
+# - copy from display
 
 class UI:
 
     keymap = {
-        
+        "Windows":
+        {
+            443: {"key": curses.KEY_LEFT, "modifiers": {"ctrl"}},
+            444: {"key": curses.KEY_RIGHT, "modifiers": {"ctrl"}},
+            480: {"key": curses.KEY_UP, "modifiers": {"ctrl"}},
+            481: {"key": curses.KEY_DOWN, "modifiers": {"ctrl"}},
+            391: {"key": curses.KEY_LEFT, "modifiers": {"shift"}},
+            400: {"key": curses.KEY_RIGHT, "modifiers": {"shift"}},
+            547: {"key": curses.KEY_UP, "modifiers": {"shift"}},
+            548: {"key": curses.KEY_DOWN, "modifiers": {"shift"}},
+            449: {"key": curses.KEY_HOME, "modifiers": {}},
+            388: {"key": curses.KEY_HOME, "modifiers": {"shift"}},
+            449: {"key": curses.KEY_HOME, "modifiers": {}},
+            388: {"key": curses.KEY_HOME, "modifiers": {"shift"}},
+            455: {"key": curses.KEY_END, "modifiers": {}},
+            384: {"key": curses.KEY_END, "modifiers": {"shift"}},
+           1001: {"key": curses.KEY_LEFT, "modifiers": {"ctrl", "shift"}},
+        },
+    
+        "Linux":
+        {
+            554: {"key": curses.KEY_LEFT, "modifiers": {"ctrl"}},
+            569: {"key": curses.KEY_RIGHT, "modifiers": {"ctrl"}},
+            393: {"key": curses.KEY_LEFT, "modifiers": {"shift"}},
+            402: {"key": curses.KEY_RIGHT, "modifiers": {"shift"}},
+            555: {"key": curses.KEY_LEFT, "modifiers": {"ctrl", "shift"}},
+            570: {"key": curses.KEY_RIGHT, "modifiers": {"ctrl", "shift"}},
+        }
     }
 
     pairIdx = None
@@ -30,25 +65,25 @@ class UI:
     def __init__(self, memory=None):
 
         # Initialize curses
-        os.system("cls" if os.name == "nt" else "clear")
         self.stdscr = curses.initscr()
         curses.update_lines_cols()
         self.cursesInit()
+        curses.use_default_colors()
         keyboard.is_pressed(29)  # start up `keyboard` listener
 
         if UI.pairIdx is None:
             UI.pairIdx = 0
-            UI.YELLOW_ON_BLACK = UI.makeColorPair(226, 0)
-            UI.GREY_ON_BLACK = UI.makeColorPair(241, 0)
-            UI.GREEN_ON_BLACK = UI.makeColorPair(10, 0)
-            UI.LIGHTBLUE_ON_BLACK = UI.makeColorPair(69, 0)
-            UI.BRIGHT_PURPLE_ON_BLACK = UI.makeColorPair(201, 0)
-            UI.DARK_PURPLE_ON_BLACK = UI.makeColorPair(129, 0)
-            UI.BRIGHT_ORANGE_ON_BLACK = UI.makeColorPair(202, 0)
-            UI.DIM_ORANGE_ON_BLACK = UI.makeColorPair(208, 0)
-            UI.BRIGHT_GREEN_ON_BLACK = UI.makeColorPair(46, 0)
-            UI.BRIGHT_RED_ON_BLACK = UI.makeColorPair(196, 0)
-            UI.WHITE_ON_BLUE = UI.makeColorPair(7, 21)
+            UI.YELLOW_ON_BLACK = UI.makeColorPair(226, -1)
+            UI.GREY_ON_BLACK = UI.makeColorPair(241, -1)
+            UI.GREEN_ON_BLACK = UI.makeColorPair(10, -1)
+            UI.LIGHTBLUE_ON_BLACK = UI.makeColorPair(69, -1)
+            UI.BRIGHT_PURPLE_ON_BLACK = UI.makeColorPair(201, -1)
+            UI.DARK_PURPLE_ON_BLACK = UI.makeColorPair(129, -1)
+            UI.BRIGHT_ORANGE_ON_BLACK = UI.makeColorPair(202, -1)
+            UI.DIM_ORANGE_ON_BLACK = UI.makeColorPair(208, -1)
+            UI.BRIGHT_GREEN_ON_BLACK = UI.makeColorPair(46, -1)
+            UI.BRIGHT_RED_ON_BLACK = UI.makeColorPair(196, -1)
+            UI.WHITE_ON_BLUE = UI.makeColorPair(-1, 21)
             UI.YELLOW_ON_BLUE = UI.makeColorPair(226, 21)
             UI.GREY_ON_BLUE = UI.makeColorPair(241, 21)
             # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
@@ -81,7 +116,6 @@ class UI:
 
 
     def copyToClipboard(self, s):
-        system = platform.system()
         if system == "Windows": subprocess.run("clip", input=s.encode("utf-8"), check=True)
         elif system == "Darwin": subprocess.run("pbcopy", input=s.encode("utf-8"), check=True)
         elif system == "Linux": 
@@ -97,9 +131,15 @@ class UI:
 
 
     def setupWindows(self) -> dict[str, curses.window]:
+        os.system("cls" if os.name == "nt" else "clear")
         self.stdscr.erase()
         ht, wd = self.stdscr.getmaxyx()
-        self.stdscr.addstr(0, (wd - len(s := "Calculator v2.0.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
+        if ht < 17 or wd < 44:
+            if ht > 3 and wd > 15:
+                self.stdscr.addstr(ht // 2, wd // 2 - 6, "Too small :(")
+                self.stdscr.refresh()
+            return False
+        self.stdscr.addstr(0, (wd - len(s := "MaxCalc v2.0.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
         self.subwins = {}
         self.stdscr.subwin(ht * 3 // 4, wd, 1, 0).box()  # rows, cols, startrow, startcol
         self.subwins["display"] = self.stdscr.subwin(ht * 3 // 4 - 2, wd - 2, 2, 1)
@@ -169,7 +209,6 @@ class UI:
 
         while True:
 
-            # print(f"Selection: ({self.selectionAnchor}, {pos})\n")
             # detect word on cursor position
             currWord, wordL, wordR = self.getWordAtPos(text, pos)
             self.text["input"] = []
@@ -230,10 +269,18 @@ class UI:
             curses.doupdate()
 
             key = self.getch()
-            shiftPressed = keyboard.is_pressed(42) or keyboard.is_pressed(54)
+            if (keyCombo := UI.keymap[system].get(key, None)): key = keyCombo["key"]
+            shiftPressed = keyCombo is not None and "shift" in keyCombo["modifiers"] or keyboard.is_pressed(42) or keyboard.is_pressed(54)
+            ctrlPressed = keyCombo is not None and "ctrl" in keyCombo["modifiers"] or keyboard.is_pressed(29)
 
             if key == curses.KEY_RESIZE:
-                self.subwins = self.setupWindows()
+                if not self.setupWindows():
+                    while key := self.getch():
+                        if key == 27: raise KeyboardInterrupt("Esc")
+                        curses.update_lines_cols()
+                        if self.setupWindows():
+                            break
+
                 wd = self.subwins["input"].getmaxyx()[1]
                 self.useWin("display").redraw()
                 continue
@@ -257,28 +304,31 @@ class UI:
                 text[selectL:selectR] = []
                 pos = selectL
                 self.selectionAnchor = None
-            elif key in (curses.KEY_BACKSPACE, 8, 127) and pos > 0:
+            elif key == 127:
+                curses.ungetch(curses.KEY_BACKSPACE)
+                curses.ungetch(1001)
+            elif key in (curses.KEY_BACKSPACE, 8) and pos > 0:
                 pos -= 1
                 text[pos:pos+1] = []
             elif key == curses.KEY_DC and pos < len(text):
                 text[pos:pos+1] = []
-            elif key in (curses.KEY_LEFT, 391, 443, curses.KEY_RIGHT, 400, 444, curses.KEY_UP, 547, 480, curses.KEY_DOWN, 548, 481, curses.KEY_HOME, 449, 388, curses.KEY_END, 455, 384):
-                if shiftPressed:   # key in (391, 400, 547, 548): # shift pressed
+            elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_UP, curses.KEY_DOWN, curses.KEY_HOME, curses.KEY_END):
+                if shiftPressed:
                     if self.selectionAnchor is None: self.selectionAnchor = pos
                 else:
                     self.selectionAnchor = None
-                if key in (curses.KEY_LEFT, 391, 443):
+                if key == curses.KEY_LEFT:
                     pos -= 1
-                    if keyboard.is_pressed(29):
+                    if ctrlPressed:
                         while pos > 0 and (not UI.isWordChar(text[pos]) or UI.isWordChar(text[pos-1])): pos -= 1
-                elif key in (curses.KEY_RIGHT, 400, 444):
+                elif key == curses.KEY_RIGHT:
                     pos += 1
-                    if keyboard.is_pressed(29):
+                    if ctrlPressed:
                         while pos < len(text) and (not UI.isWordChar(text[pos-1]) or pos < len(text) and UI.isWordChar(text[pos])): pos += 1
-                elif key in (curses.KEY_UP, 547, 480): pos -= wd
-                elif key in (curses.KEY_DOWN, 548, 481): pos += wd
-                elif key in (curses.KEY_HOME, 449, 388): pos = 0
-                elif key in (curses.KEY_END, 455, 384): pos = len(text)
+                elif key == curses.KEY_UP: pos -= wd
+                elif key == curses.KEY_DOWN: pos += wd
+                elif key == curses.KEY_HOME: pos = 0
+                elif key == curses.KEY_END: pos = len(text)
                 pos = min(len(text), max(pos, 0))
                 if self.selectionAnchor == pos: self.selectionAnchor = None
             elif key in (9, 351):  # TAB
@@ -314,7 +364,7 @@ class UI:
                     selectL, selectR = sorted([self.selectionAnchor, pos])
                     self.copyToClipboard(''.join(text[selectL:selectR]))
             elif key == 27:
-                raise KeyboardInterrupt("Ctrl-C")
+                raise KeyboardInterrupt("Esc")
 
 
     def addText(self, *strAndAttrTuples, startNewLine=True):
@@ -342,16 +392,16 @@ class UI:
             self.subwins[self.currWin].addstr(*charAndAttrs)
         return self
 
-    # def end(self):
-    #     # Set everything back to normal
-    #     self.stdscr.keypad(0)
-    #     echo()
-    #     nocbreak()
-    #     endwin()
+
+    def end(self):
+        # Set everything back to normal
+        self.stdscr.keypad(0)
+        curses.echo()
+        curses.nocbreak()
+        curses.endwin()
 
 
 if __name__ == "__main__":
-
     # import tracemalloc
     # tracemalloc.start()
     # print("Loading dictionary...")
