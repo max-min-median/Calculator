@@ -15,8 +15,10 @@ from UI import *
 def main():
 
     basedir = Path(__file__).resolve().parent
-    settings = Settings(basedir/'calc_settings.txt')
-    main_mem = Memory(basedir/'calc_mem.txt', settings)
+    mem_path = basedir/'mem.txt'
+    settings_path = basedir/'settings.txt'
+    settings = Settings(settings_path)
+    main_mem = Memory(mem_path, settings)
     main_mem.trie = trie = Trie.fromCollection(main_mem.update)
     ui = UI(main_mem)
     working_epsilon = RealNumber(1, 10 ** settings.get('working_precision'), fcf=False)
@@ -77,7 +79,7 @@ def main():
                 main_mem.add('ans', val)
                 ui.addText("display", (val.disp(settings.get('frac_max_length'), settings.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
             if main_mem._vars_version != current_ver:
-                main_mem.save(basedir/'calc_mem.txt')
+                main_mem.save(mem_path)
                 current_ver = main_mem._vars_version
         except CalculatorError as e:
             if len(e.args) > 1: ui.addText("display", (' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
