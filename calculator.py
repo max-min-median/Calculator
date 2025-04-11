@@ -85,8 +85,8 @@ def main():
             if len(e.args) > 1: ui.addText("display", (' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
             ui.addText("display", (f"{repr(e).split('(')[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))
             # raise e
-        except ZeroDivisionError:
-            ui.addText("display", ("Division by zero", UI.BRIGHT_RED_ON_BLACK))
+        except ZeroDivisionError as e:
+            ui.addText("display", (repr(e), UI.BRIGHT_RED_ON_BLACK))
         except RecursionError:
             ui.addText("display", ("RecursionError: Check for infinite recursion in functions.", UI.BRIGHT_RED_ON_BLACK))
         except (EOFError, KeyboardInterrupt):

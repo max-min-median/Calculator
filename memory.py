@@ -1,4 +1,4 @@
-from number import RealNumber
+from number import *
 import op
 from settings import Settings
 
@@ -8,8 +8,9 @@ class Memory:
     # Parser requires access to memory
     # Expressions requires access to memory
 
-    base_list = {'e': RealNumber('2.718281828459045235360287471353'),
-                 'pi': RealNumber('3.1415926535897932384626433832795'),
+    base_list = {'e': e,
+                 'pi': pi,
+                 'i': imag_i,
                  'P': op.permutation,   # These are here so that
                  'C': op.combination,   # they are overrideable.
     }

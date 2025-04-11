@@ -2,16 +2,8 @@ from operators import Operator, Infix, Prefix, Postfix
 from functions import Function
 from errors import *
 from vars import LValue
-from number import RealNumber
+from number import *
 
-e = RealNumber('2.718281828459045235360287471353')
-pi = RealNumber('3.1415926535897932384626433832795')
-ln2 = RealNumber(1554903831458736, 2243252046704767, fcf=False)
-ln10 = RealNumber(227480160645689, 98793378510888, fcf=False)
-zero = RealNumber(0)
-one = RealNumber(1)
-two = RealNumber(2)
-ten = RealNumber(10)
 
 def factorial_fn(n, **kwargs):
     if not n.is_int(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
@@ -36,8 +28,8 @@ def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
         if b.is_int(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
     # print(f'Exponentiation: {str(a)} ^ {str(b)}')
-    if a.numerator == 0:
-        if b.numerator == 0: raise CalculatorError(f'0^0 is undefined')
+    if a == zero:
+        if b == zero: raise CalculatorError(f'0^0 is undefined')
         return zero
     if b.sign == -1: return one / exponentiation_fn(a, -b, *args, epsilon, fcf, **kwargs)
     if b.is_int(): return int_power(a, int(b), epsilon=epsilon, fcf=fcf)
@@ -96,7 +88,7 @@ def ln_fn(x, epsilon=None, **kwargs):
 def sin_fn(x, epsilon=None, **kwargs):
     if x < zero: return -sin_fn(-x, epsilon=epsilon, **kwargs)
     x = x % (pi * two)
-    if x > pi * 3 / two: return -sin_fn(pi * two - x, epsilon=epsilon, **kwargs)
+    if x > pi * three / two: return -sin_fn(pi * two - x, epsilon=epsilon, **kwargs)
     elif x > pi: return -sin_fn(x - pi, epsilon=epsilon, **kwargs)
     elif x > pi / two: return sin_fn(pi - x, epsilon=epsilon, **kwargs)
     sum = x_pow = delta_x = x
@@ -137,38 +129,37 @@ def tanh_fn(x, epsilon=None, **kwargs):
 
 def arcsin_fn(x, epsilon=None, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
-    if x < 0: return -arcsin_fn(-x, epsilon=epsilon, **kwargs)
-    if x > 1: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
-    if x * x > -x * x + 1: return pi / 2 - arcsin_fn(exponentiation_fn(-x * x + 1, RealNumber(1, 2, fcf=False), epsilon=epsilon), epsilon=epsilon, **kwargs)
+    if x.sign == -1: return -arcsin_fn(-x, epsilon=epsilon, **kwargs)
+    if x > one: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
+    if x * x > -x * x + one: return pi / two - arcsin_fn(exponentiation_fn(-x * x + one, half, epsilon=epsilon), epsilon=epsilon, **kwargs)
     sum = term = x
     xsqr = x * x
     four = RealNumber(4)
     k = RealNumber(0)
     while abs(term) > epsilon:
-        k += 1
-        term *= xsqr * (k * 2) * (k * 2 - 1) / four / k / k
+        k += one
+        term *= xsqr * (k * two) * (k * two - one) / four / k / k
         term = term.fast_continued_fraction(epsilon=epsilon)
-        sum += term / (k * 2 + 1)
+        sum += term / (k * two + one)
         sum = sum.fast_continued_fraction(epsilon=epsilon)
     return sum
 
 def arccos_fn(x, epsilon=None, **kwargs):
-    if x < 0: return pi - arccos_fn(-x, epsilon=epsilon, **kwargs)
-    if x > 1: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
-    return pi / 2 - arcsin_fn(x, epsilon=epsilon, **kwargs)
+    if x.sign == -1: return pi - arccos_fn(-x, epsilon=epsilon, **kwargs)
+    if x > one: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
+    return pi / two - arcsin_fn(x, epsilon=epsilon, **kwargs)
 
 def arctan_fn(x, epsilon=None, **kwargs):
-    if x < 0: return -arctan_fn(-x, epsilon=epsilon, **kwargs)
-    if x > 1: return pi / 2 - arctan_fn(RealNumber(1) / x, epsilon=epsilon, **kwargs)
+    if x.sign == -1: return -arctan_fn(-x, epsilon=epsilon, **kwargs)
+    if x > one: return pi / two - arctan_fn(RealNumber(1) / x, epsilon=epsilon, **kwargs)
     # https://en.wikipedia.org/wiki/Arctangent_series
-    sum = term = x / (x * x + 1)
+    sum = term = x / (x * x + one)
     factor = term * x
-    num = RealNumber(2)
-    two = RealNumber(2)
+    num = two
     while abs(term) > epsilon:
         term *= factor
         term *= num
-        term /= num + 1
+        term /= num + one
         term = term.fast_continued_fraction(epsilon=epsilon)
         sum += term
         sum = sum.fast_continued_fraction(epsilon=epsilon)
