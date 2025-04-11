@@ -1,6 +1,6 @@
-from Numbers import Number
-import Op
-from Settings import Settings
+from number import RealNumber
+import op
+from settings import Settings
 
 class Memory:
 
@@ -8,31 +8,31 @@ class Memory:
     # Parser requires access to memory
     # Expressions requires access to memory
 
-    base_list = {'e': Number('2.718281828459045235360287471353'),
-                 'pi': Number('3.1415926535897932384626433832795'),
-                 'P': Op.permutation,   # These are here so that
-                 'C': Op.combination,   # they are overrideable.
+    base_list = {'e': RealNumber('2.718281828459045235360287471353'),
+                 'pi': RealNumber('3.1415926535897932384626433832795'),
+                 'P': op.permutation,   # These are here so that
+                 'C': op.combination,   # they are overrideable.
     }
 
-    top_list = {'sin': Op.sin,   # These override user vars
-                'cosec': Op.csc,
-                'csc': Op.csc,
-                'cos': Op.cos,
-                'sec': Op.sec,
-                'tan': Op.tan,
-                'cot': Op.cot,
-                'sinh': Op.sinh,
-                'cosh': Op.cosh,
-                'tanh': Op.tanh,
-                'asin': Op.arcsin,
-                'arcsin': Op.arcsin,
-                'acos': Op.arccos,
-                'arccos': Op.arccos,
-                'atan': Op.arctan,
-                'arctan': Op.arctan,
-                'sqrt': Op.sqrt,
-                'ln': Op.ln,
-                'lg': Op.lg,
+    top_list = {'sin': op.sin,   # These override user vars
+                'cosec': op.csc,
+                'csc': op.csc,
+                'cos': op.cos,
+                'sec': op.sec,
+                'tan': op.tan,
+                'cot': op.cot,
+                'sinh': op.sinh,
+                'cosh': op.cosh,
+                'tanh': op.tanh,
+                'asin': op.arcsin,
+                'arcsin': op.arcsin,
+                'acos': op.arccos,
+                'arccos': op.arccos,
+                'atan': op.arctan,
+                'arctan': op.arctan,
+                'sqrt': op.sqrt,
+                'ln': op.ln,
+                'lg': op.lg,
     }
 
     def __init__(self, settings, filename=None):
@@ -68,11 +68,11 @@ class Memory:
         return deleted
     
     def save(self, filename):
-        from Functions import Function, FuncComposition
+        from functions import Function, FuncComposition
         with open(filename, "w") as f:
             for var in self.own_list:
                 value = self.own_list[var]
-                if isinstance(value, Number):
+                if isinstance(value, RealNumber):
                     f.write(f"{var} = {str(value)}\n")
                 elif isinstance(value, FuncComposition):
                     f.write(f"{var} = {value.name}\n")
@@ -80,11 +80,11 @@ class Memory:
                     f.write(f"{str(value)}\n")
 
     def load(self, settings, filename):
-        import Parser
-        working_epsilon = Number(1, 10 ** settings.get('working_precision'), fcf=False)
+        import parser
+        working_epsilon = RealNumber(1, 10 ** settings.get('working_precision'), fcf=False)
         with open(filename) as f:
             for line in f:
-                Parser.parse(line).value(mem=self, epsilon=working_epsilon, debug=False)
+                parser.parse(line).value(mem=self, epsilon=working_epsilon, debug=False)
 
     @staticmethod
     def combine(*dicts):  # combines Memory objects and/or dictionaries and produces a dict

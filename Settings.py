@@ -1,4 +1,4 @@
-from Errors import SettingsError
+from errors import SettingsError
 import json
 
 class Settings:

@@ -2,9 +2,9 @@ import curses
 import os
 import platform
 import subprocess
-from Trie import Trie
-from Functions import Function
-from Operators import Operator
+from trie import Trie
+from functions import Function
+from operators import Operator
 
 system = platform.system()
 
@@ -18,6 +18,8 @@ except ImportError:
 # - copy from display
 
 class UI:
+
+    _instance = None
 
     keymap = {
         "Windows":
@@ -62,13 +64,30 @@ class UI:
         ascii = ord(char)
         return 65 <= ascii <= 90 or 97 <= ascii <= 122 or char in "_'"  # or 48 <= ascii <= 57
 
+    @staticmethod
+    def getInstance():
+        return UI._instance
+
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
 
     def __init__(self, memory=None):
+        
+        if hasattr(self, 'initialized'): return
+        else: self.initialized = True
 
         # Initialize curses
         self.stdscr = curses.initscr()
         curses.update_lines_cols()
-        self.cursesInit()
+        curses.raw()
+        curses.noecho()
+        self.stdscr.keypad(1)
+        try: curses.start_color()
+        except: pass
         curses.use_default_colors()
 
         if UI.pairIdx is None:
@@ -94,27 +113,10 @@ class UI:
         # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
         self.prompt = (("♦", UI.BRIGHT_ORANGE_ON_BLACK), (">", UI.DIM_ORANGE_ON_BLACK), (" "))
         self.text = {"display": [], "status": [[]], "input": []}
+        self.inputHistory = []
         self.selectionAnchor = None
         self.pos = 0
         self.setupWindows()
-
-
-    def cursesInit(self):
-        # Turn off echoing of keys, and enter cbreak mode, where no buffering is performed on keyboard input
-        curses.raw()
-        curses.noecho()
-        # cbreak()
-        # nonl()
-
-        # In keypad mode, escape sequences for special keys (like the cursor keys) will be interpreted and
-        # a special value like curses.KEY_LEFT will be returned
-        self.stdscr.keypad(1)
-
-        # Start color, too.  Harmless if the terminal doesn't have color; user can test with has_color() later on.
-        # The try/catch works around a minor bit of over-conscientiousness in the curses module --
-        # the error return from C start_color() is ignorable.
-        try: curses.start_color()
-        except: pass
 
 
     def copyToClipboard(self, s):
@@ -134,15 +136,16 @@ class UI:
 
     def setupWindows(self) -> dict[str, curses.window]:
         os.system("cls" if os.name == "nt" else "clear")
+        curses.raw()
         self.stdscr.erase()
         self.ht, self.wd = self.stdscr.getmaxyx()
+        self.subwins = {}
         if self.ht < 17 or self.wd < 44:
             if self.ht > 3 and self.wd > 15:
                 self.stdscr.addstr(self.ht // 2, self.wd // 2 - 6, "Too small :(")
                 self.stdscr.refresh()
             return False
-        self.stdscr.addstr(0, (self.wd - len(s := "MaxCalc v2.0.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
-        self.subwins = {}
+        self.stdscr.addstr(0, (self.wd - len(s := "MaxCalc v2.0.1-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
         self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
         self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
         self.subwins["display"].leaveok(True)
@@ -173,19 +176,25 @@ class UI:
     def getInput(self, trie: Trie=None):
         if trie is not None: self.trie = trie
         text = []
+        keys = []
         nearestWords = []
         self.pos = 0
+        historyIndex = 0
         self.currWord = self.prevWord = None
         self.wordL, self.wordR = len(text), 0
         tabbed = False
         self.drawInput(text)
 
         while True:
+            if keys == []:
+                key = self.stdscr.getch()
+                self.stdscr.nodelay(True)
+                while (k := self.stdscr.getch()) != -1: keys.append(k)
+                keys.reverse()
+                self.stdscr.nodelay(False)
+            else:
+                key = keys.pop()
 
-            key = self.stdscr.getch()
-            if self.statusDuration > 0:
-                self.statusDuration -= 1
-                if self.statusDuration == 0: self.redraw("status")
             if (keyCombo := UI.keymap[system].get(key, None)): key = keyCombo["key"]
             shiftPressed = keyCombo is not None and "shift" in keyCombo["modifiers"] or keyboard.is_pressed(42) or keyboard.is_pressed(54)
             ctrlPressed = keyCombo is not None and "ctrl" in keyCombo["modifiers"] or keyboard.is_pressed(29)
@@ -193,12 +202,7 @@ class UI:
             if key == 55 and (shiftPressed or keyboard.is_pressed(71)): key = curses.KEY_HOME
             elif key == 49 and (shiftPressed or keyboard.is_pressed(79)): key = curses.KEY_END
 
-            # Resolve tabbed state if the current key is not a tab or resize
-            if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
-                text[self.wordL:self.wordR] = [*self.currWord + nearestWords[tabbed][len(self.currWord):]]
-                self.pos = self.wordL + len(nearestWords[tabbed])
-                tabbed = False
-
+            # Handle window resizing
             if key == curses.KEY_RESIZE:
                 if not self.setupWindows():
                     while key := self.getch():
@@ -207,24 +211,67 @@ class UI:
                         if self.setupWindows():
                             break
                 self.redraw("display")
+                continue
 
-            elif key == 1:  # Ctrl-A
+            if self.statusDuration > 0:
+                self.statusDuration -= 1
+                if self.statusDuration == 0: self.redraw("status")
+
+            # Resolve tabbed state if the current key is not a tab or resize
+            if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
+                text[self.wordL:self.wordR] = [*self.currWord + nearestWords[tabbed][len(self.currWord):]]
+                self.pos = self.wordL + len(nearestWords[tabbed])
+                tabbed = False
+
+            # Register history as current input if a key is pressed which is not KEY_UP or KEY_DOWN.
+            if historyIndex != 0 and key not in (curses.KEY_UP, curses.KEY_DOWN):
+                if key in (curses.KEY_ENTER, 10, 13, 459):
+                    self.inputHistory.pop(historyIndex)
+                historyIndex = 0
+
+            if key == 21:  # Ctrl-U = Ctrl-A then Backspace
+                curses.ungetch(curses.KEY_BACKSPACE)
+                curses.ungetch(1)  # Ctrl-A
+                continue
+            elif key == 24:  # Ctrl-X = Ctrl-C then Backspace
+                if self.selectionAnchor is not None:
+                    curses.ungetch(curses.KEY_BACKSPACE)
+                    curses.ungetch(3)  # Ctrl-C
+                continue
+
+            if key == 1:  # Ctrl-A
                 self.selectionAnchor = 0
                 self.pos = len(text)
-            elif key in (curses.KEY_BACKSPACE, 8, 127, curses.KEY_DC, 24) and self.selectionAnchor is not None:
+            elif key in (curses.KEY_BACKSPACE, 8, 127, curses.KEY_DC) and self.selectionAnchor is not None:
                 selectL, selectR = sorted([self.selectionAnchor, self.pos])
-                if key == 24: self.copyToClipboard(''.join(text[selectL:selectR]))
                 text[selectL:selectR] = []
                 self.pos = selectL
                 self.selectionAnchor = None
             elif key == 127:
                 curses.ungetch(curses.KEY_BACKSPACE)
                 curses.ungetch(1001)
+                continue
             elif key in (curses.KEY_BACKSPACE, 8) and self.pos > 0:
                 self.pos -= 1
                 text[self.pos:self.pos+1] = []
             elif key == curses.KEY_DC and self.pos < len(text):
                 text[self.pos:self.pos+1] = []
+            elif key in (curses.KEY_UP, curses.KEY_DOWN):
+                if key == curses.KEY_UP:
+                    if -historyIndex == len(self.inputHistory): continue
+                    if historyIndex == 0:
+                        currentText = text
+                    historyIndex -= 1
+                    text = [*self.inputHistory[historyIndex]]
+                    self.pos = len(text)
+                else:  # curses.KEY_DOWN
+                    if historyIndex == 0: continue
+                    historyIndex += 1
+                    if historyIndex == 0:
+                        text = currentText
+                    else:
+                        text = [*self.inputHistory[historyIndex]]
+                    self.pos = len(text)
             elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_UP, curses.KEY_DOWN, curses.KEY_HOME, curses.KEY_END):
                 if shiftPressed:
                     if self.selectionAnchor is None: self.selectionAnchor = self.pos
@@ -238,8 +285,6 @@ class UI:
                     self.pos += 1
                     if ctrlPressed:
                         while self.pos < len(text) and (not UI.isWordChar(text[self.pos-1]) or self.pos < len(text) and UI.isWordChar(text[self.pos])): self.pos += 1
-                elif key == curses.KEY_UP: self.pos -= self.wd - 2
-                elif key == curses.KEY_DOWN: self.pos += self.wd - 2
                 elif key == curses.KEY_HOME: self.pos = 0
                 elif key == curses.KEY_END: self.pos = len(text)
                 self.pos = min(len(text), max(self.pos, 0))
@@ -268,6 +313,7 @@ class UI:
                     self.subwins["status"].refresh()
                     if len(self.text["display"]) > 0: self.addText("display")
                     self.addText("display", *self.prompt, (result, ))
+                    self.inputHistory.append(result)
                     return result
                 # ignore empty input
                 text = []
@@ -288,8 +334,6 @@ class UI:
                     tabbed = False
                     # update text of status/autocomplete bar
                     spaces = ''
-                    while len('   '.join(nearestWords)) >= self.wd:
-                        nearestWords.pop()
                     for word in nearestWords:
                         self.addText("status", (spaces, ), (word[:len(self.currWord)], UI.GREEN_ON_BLACK), (word[len(self.currWord):], UI.GREY_ON_BLACK), startNewLine=False)
                         spaces = '   '
@@ -297,11 +341,15 @@ class UI:
                     nearestWords = []
                 if self.statusDuration == 0: self.redraw("status")
 
+            if keys: continue
+
             self.drawInput(text, tabbed, nearestWords)
 
 
-    def drawInput(self, text, tabbed=False, nearestWords=[]):  # adds the correct text to self.text["input"]
-        # print input
+    def drawInput(self, text, tabbed=False, nearestWords=[]):
+        # redraws the input window and relocates the cursor
+        if not self.subwins: return
+
         selectL, selectR = sorted([self.selectionAnchor, self.pos]) if self.selectionAnchor is not None else (len(text), 0)
         self.text["input"].clear()
         self.addText("input", *self.prompt)
@@ -376,6 +424,6 @@ if __name__ == "__main__":
     # curses.raw()
     # ui.trie = trie
     while True:
-        k = ui.getch()
+        k = ui.stdscr.getch()
         ui.stdscr.addstr(f'key {str(k)} typed.\n')
         ui.stdscr.refresh()

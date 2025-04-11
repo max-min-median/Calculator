@@ -1,9 +1,9 @@
-from Expressions import Expression
-from Numbers import Number
-from Operators import Operator, Infix, Prefix, Postfix
-from Vars import WordToken, Value
-import Op
-from Errors import ParseError
+from expressions import Expression
+from number import RealNumber
+from operators import Operator, Infix, Prefix, Postfix
+from vars import WordToken, Value
+import op
+from errors import ParseError
 import re
 
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
@@ -12,7 +12,7 @@ import re
 class Lexer:
 
     def __init__(self, expr_string='', mem=None):
-        if mem is None: from Memory import Memory; mem = Memory(test=True) # raise TypeError('No memory provided to lexer!')
+        if mem is None: from memory import Memory; mem = Memory(test=True) # raise TypeError('No memory provided to lexer!')
         self._tokens = []
         self._pos_list = []
         self._pos = 0
@@ -44,7 +44,7 @@ class Lexer:
         if m := re.match(r'([(){}[\]])', self.current_string):
             return add_token(self.current_string[0], m)
         if m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', self.current_string):  # Number. Cannot follow Number, space_separator, or Var
-            return add_token(Number(m.group()), m)
+            return add_token(RealNumber(m.group()), m)
         for regex in Op.regex:
             if m := re.match(regex, self.current_string): return add_token(Op.regex[regex], m)
         if m := re.match(r'([A-Za-z](?:\w*(?:\d(?!(?:[0-9.]))|[A-Za-z_](?![A-Za-z])))?)', self.current_string):  # Word token (might be a concatenation of vars & possible func at the end)
@@ -94,7 +94,7 @@ def parse(s, start_pos=0, brackets='', mem=None, debug=False):
             else:
                 raise ParseError(f'Unmatched right delimiter "{s[0]}" at pos {start_pos + pos}')
         elif m := re.match(r'\d+(?:\.\d*)?|\.\d+', s):   # Number. Cannot follow Number, space_separator, or Var
-            add_token(Number(m.group()), m)
+            add_token(RealNumber(m.group()), m)
         else:  # symbolic operator
             found_token = False
             for regex in (dict := Op.regex):
@@ -147,7 +147,7 @@ def validate(tokens, pos_list, brackets=''):
                 lst[i] = Op.addition if lst[i] == Op.ambiguous_plus else Op.subtraction
                 i -= 2
             # Numbers cannot follow space separators or evaluables
-            case [_any_, Value() | Op.space_separator, Number()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression (pos {pos_lst[i+1]})')
+            case [_any_, Value() | Op.space_separator, RealNumber()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression (pos {pos_lst[i+1]})')
             # UR has to follow an evaluable
             case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken)): raise ParseError(f"Invalid operand for {str(lst[i])} (pos {pos_lst[i]})")
             # UL cannot precede Bin or UR
@@ -157,7 +157,7 @@ def validate(tokens, pos_list, brackets=''):
     return lst[1:-1], pos_lst[1:-1]
 
 if __name__ == '__main__':
-    from Memory import Memory
+    from memory import Memory
     mem = Memory()
     exp1 = parse('25 - cos +3pi + (5 sqrt(4)) - 4abc + sqr', debug=True, mem=mem)
     print(str(exp1))

@@ -1,24 +1,24 @@
-from Operators import Operator, Infix, Prefix, Postfix
-from Functions import Function
-from Errors import *
-from Vars import LValue
-from Numbers import Number
+from operators import Operator, Infix, Prefix, Postfix
+from functions import Function
+from errors import *
+from vars import LValue
+from number import RealNumber
 
-e = Number('2.718281828459045235360287471353')
-pi = Number('3.1415926535897932384626433832795')
-ln2 = Number(1554903831458736, 2243252046704767, fcf=False)
-ln10 = Number(227480160645689, 98793378510888, fcf=False)
-zero = Number(0)
-one = Number(1)
-two = Number(2)
-ten = Number(10)
+e = RealNumber('2.718281828459045235360287471353')
+pi = RealNumber('3.1415926535897932384626433832795')
+ln2 = RealNumber(1554903831458736, 2243252046704767, fcf=False)
+ln10 = RealNumber(227480160645689, 98793378510888, fcf=False)
+zero = RealNumber(0)
+one = RealNumber(1)
+two = RealNumber(2)
+ten = RealNumber(10)
 
 def factorial_fn(n, **kwargs):
     if not n.is_int(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
     n = int(n)
     if n in (0, 1): return one
     for i in range(2, n): n *= i
-    return Number(n)
+    return RealNumber(n)
 
 def permutation_fn(n, r, **kwargs):  # nPr
     return combination_fn(n, r, perm=True, **kwargs)
@@ -29,7 +29,7 @@ def combination_fn(n, r, perm=False, **kwargs):  # nCr
     res = 1
     if n in (0, 1): return one
     for i in range(1, r + 1): res *= n + 1 - i; res //= i ** (not perm)
-    return Number(res)
+    return RealNumber(res)
 
 def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
     if isinstance(a, Function):
@@ -139,11 +139,11 @@ def arcsin_fn(x, epsilon=None, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
     if x < 0: return -arcsin_fn(-x, epsilon=epsilon, **kwargs)
     if x > 1: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
-    if x * x > -x * x + 1: return pi / 2 - arcsin_fn(exponentiation_fn(-x * x + 1, Number(1, 2, fcf=False), epsilon=epsilon), epsilon=epsilon, **kwargs)
+    if x * x > -x * x + 1: return pi / 2 - arcsin_fn(exponentiation_fn(-x * x + 1, RealNumber(1, 2, fcf=False), epsilon=epsilon), epsilon=epsilon, **kwargs)
     sum = term = x
     xsqr = x * x
-    four = Number(4)
-    k = Number(0)
+    four = RealNumber(4)
+    k = RealNumber(0)
     while abs(term) > epsilon:
         k += 1
         term *= xsqr * (k * 2) * (k * 2 - 1) / four / k / k
@@ -159,12 +159,12 @@ def arccos_fn(x, epsilon=None, **kwargs):
 
 def arctan_fn(x, epsilon=None, **kwargs):
     if x < 0: return -arctan_fn(-x, epsilon=epsilon, **kwargs)
-    if x > 1: return pi / 2 - arctan_fn(Number(1) / x, epsilon=epsilon, **kwargs)
+    if x > 1: return pi / 2 - arctan_fn(RealNumber(1) / x, epsilon=epsilon, **kwargs)
     # https://en.wikipedia.org/wiki/Arctangent_series
     sum = term = x / (x * x + 1)
     factor = term * x
-    num = Number(2)
-    two = Number(2)
+    num = RealNumber(2)
+    two = RealNumber(2)
     while abs(term) > epsilon:
         term *= factor
         term *= num
@@ -201,12 +201,12 @@ division = Infix(' / ', lambda x, y, *args, **kwargs: x / y)
 modulo = Infix(' % ', lambda x, y, *args, **kwargs: x % y)
 positive = Prefix('+', lambda x, *args, **kwargs: x)
 negative = Prefix('-', lambda x, *args, **kwargs: -x)
-lt = Infix(' < ', lambda x, y, *args, **kwargs: Number(1) if x < y else Number(0))
-lt_eq = Infix(' <= ', lambda x, y, *args, **kwargs: Number(1) if x <= y else Number(0))
-gt = Infix(' > ', lambda x, y, *args, **kwargs: Number(1) if x > y else Number(0))
-gt_eq = Infix(' >= ', lambda x, y, *args, **kwargs: Number(1) if x >= y else Number(0))
-eq = Infix(' == ', lambda x, y, *args, **kwargs: Number(1) if x == y else Number(0))
-neq = Infix(' != ', lambda x, y, *args, **kwargs: Number(1) if x != y else Number(0))
+lt = Infix(' < ', lambda x, y, *args, **kwargs: RealNumber(1) if x < y else RealNumber(0))
+lt_eq = Infix(' <= ', lambda x, y, *args, **kwargs: RealNumber(1) if x <= y else RealNumber(0))
+gt = Infix(' > ', lambda x, y, *args, **kwargs: RealNumber(1) if x > y else RealNumber(0))
+gt_eq = Infix(' >= ', lambda x, y, *args, **kwargs: RealNumber(1) if x >= y else RealNumber(0))
+eq = Infix(' == ', lambda x, y, *args, **kwargs: RealNumber(1) if x == y else RealNumber(0))
+neq = Infix(' != ', lambda x, y, *args, **kwargs: RealNumber(1) if x != y else RealNumber(0))
 logical_and = Infix(' && ', lambda x, y, *args, **kwargs: x if x.sign == 0 else y)
 logical_or = Infix(' || ', lambda x, y, *args, **kwargs: x if x.sign != 0 else y)
 function_invocation = Infix('<invoke>', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
@@ -239,8 +239,8 @@ weak_arccos = Prefix('acos ', arccos_fn)
 weak_arctan = Prefix('atan ', arctan_fn)
 weak_ln = Prefix('ln ', ln_fn)
 weak_lg = Prefix('lg ', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
-weak_sqrt = Prefix('sqrt ', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
-sqrt = Prefix('sqrt', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, Number(1, 2, fcf=False), epsilon=epsilon))
+weak_sqrt = Prefix('sqrt ', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, RealNumber(1, 2, fcf=False), epsilon=epsilon))
+sqrt = Prefix('sqrt', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, RealNumber(1, 2, fcf=False), epsilon=epsilon))
 exponentiation = Infix('^', exponentiation_fn)
 factorial = Postfix('!', factorial_fn)
 

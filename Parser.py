@@ -1,9 +1,9 @@
-from Expressions import Expression, Tuple
-from Numbers import Number
-from Operators import Infix, Prefix, Postfix
-from Vars import LValue, WordToken, Value
-import Op
-from Errors import ParseError
+from expressions import Expression, Tuple
+from number import RealNumber
+from operators import Infix, Prefix, Postfix
+from vars import LValue, WordToken, Value
+import op
+from errors import ParseError
 import re
 
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
@@ -19,9 +19,9 @@ def parse(s, start_pos=0, brackets='', parent=None, debug=False):
             pos += m.span()[1]
 
     def check_Op_regex():
-        for regex in Op.regex:
+        for regex in op.regex:
             if m := re.match(regex, ss):
-                add_token(Op.regex[regex], m)
+                add_token(op.regex[regex], m)
                 return True
         return False
     
@@ -67,7 +67,7 @@ def parse(s, start_pos=0, brackets='', parent=None, debug=False):
             validate(expr)
             return expr
         elif m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', ss):   # Number. Cannot follow Number, space_separator, or Var
-            add_token(Number(m.group(), fcf=True, epsilon=Number(1, 10**20, fcf=False)), m)
+            add_token(RealNumber(m.group(), fcf=True, epsilon=RealNumber(1, 10**20, fcf=False)), m)
         elif check_Op_regex():
             continue
         elif m := re.match(r'([A-Za-z](?:\w*(?:\d(?!(?:[0-9.]))|[A-Za-z_](?![A-Za-z])))?)', ss):  # Word token (might be a concatenation of vars & possible func at the end) 
@@ -84,8 +84,8 @@ def validate(expr):
     # Validation checks
     i = 1
     # Remove space separators that come at the start or end
-    if len(expr.tokens) > 0 and expr.tokens[0] == Op.space_separator: expr.tokens.pop(0); expr.token_pos.pop(0)
-    if len(expr.tokens) > 0 and expr.tokens[-1] == Op.space_separator: expr.tokens.pop(); expr.token_pos.pop()
+    if len(expr.tokens) > 0 and expr.tokens[0] == op.space_separator: expr.tokens.pop(0); expr.token_pos.pop(0)
+    if len(expr.tokens) > 0 and expr.tokens[-1] == op.space_separator: expr.tokens.pop(); expr.token_pos.pop()
     lst, pos_lst = [None] + expr.tokens + [None], [None] + expr.token_pos + [None]
     while i < len(lst) - 1:
         # Transform / remove some types of tokens
@@ -95,27 +95,27 @@ def validate(expr):
             # Bin cannot precede Bin / UR / None
             case [_any_, Infix(), Infix() | Postfix() | None]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.pos_of_elem(i-1))
             # L to R: Convert +/- to positive/negative if they come after Bin / UL
-            case [None | Infix() | Prefix(), Op.ambiguous_plus | Op.ambiguous_minus, _any_]:
-                lst[i] = Op.positive if lst[i] == Op.ambiguous_plus else Op.negative
+            case [None | Infix() | Prefix(), op.ambiguous_plus | op.ambiguous_minus, _any_]:
+                lst[i] = op.positive if lst[i] == op.ambiguous_plus else op.negative
                 i -= 2
             # L to R: If not, convert +/- to addition/subtraction
-            case [_other_types_, Op.ambiguous_plus | Op.ambiguous_minus, _also_other_types_]:
-                lst[i] = Op.addition if lst[i] == Op.ambiguous_plus else Op.subtraction
+            case [_other_types_, op.ambiguous_plus | op.ambiguous_minus, _also_other_types_]:
+                lst[i] = op.addition if lst[i] == op.ambiguous_plus else op.subtraction
                 i -= 2
             # Numbers cannot follow space separators or evaluables
-            case [_any_, Value() | Op.space_separator, Number()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression', expr.pos_of_elem(i))
+            case [_any_, Value() | op.space_separator, RealNumber()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression', expr.pos_of_elem(i))
             # UR has to follow an evaluable or other UR
             case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Invalid operand for {str(lst[i])}", expr.pos_of_elem(i-1))
             # UL cannot precede Bin, UR or None
             case [_any_, Prefix(), Infix() | Postfix() | None]: raise ParseError(f"Invalid operand for {str(lst[i])}", expr.pos_of_elem(i-1))
-            case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != Op.assignment: raise ParseError(f"RValue cannot be the target of an assignment ", expr.pos_of_elem(i))
+            case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment ", expr.pos_of_elem(i))
             case _: pass
         i += 1
     expr.tokens, expr.token_pos = lst[1:-1], pos_lst[1:-1]
 
 # test code
 if __name__ == '__main__':
-    from Memory import Memory
+    from memory import Memory
     mem = Memory()
 
     def test_func():

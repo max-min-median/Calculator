@@ -8,8 +8,8 @@ class Operator:
     
     @property
     def power(self):  # binding power for determining precedence
-        import Op
-        return Op.power[self] if self in Op.power else None
+        import op
+        return op.power[self] if self in op.power else None
 
 class Prefix(Operator):
     def __init__(self, name='<un_op_l>', function=lambda x: 'undefined un_op_left'):

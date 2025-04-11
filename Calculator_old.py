@@ -1,9 +1,9 @@
-from Vars import *
-from Memory import Memory
-from Errors import *
-from Parser import parse
-from Numbers import Number
-from Settings import Settings
+from vars import *
+from memory import Memory
+from errors import *
+from parser import parse
+from number import RealNumber
+from settings import Settings
 from pathlib import Path
 import sys, re
 import curses
@@ -19,8 +19,8 @@ def main():
     basedir = Path(__file__).resolve().parent
     settings = Settings(basedir/'calc_settings.txt')
     main_mem = Memory(basedir/'calc_mem.txt', settings)
-    working_epsilon = Number(1, 10 ** settings.get('working_precision'), fcf=False)
-    final_epsilon = Number(1, 10 ** settings.get('final_precision'), fcf=False)
+    working_epsilon = RealNumber(1, 10 ** settings.get('working_precision'), fcf=False)
+    final_epsilon = RealNumber(1, 10 ** settings.get('final_precision'), fcf=False)
     current_ver = main_mem._vars_version
 
     while True:
@@ -28,7 +28,7 @@ def main():
             inp = input(prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             # check for commands
             if m := re.match(r'^\s*help\s*$', inp):
-                import Help
+                import help
                 Help.display()
             elif m := re.match(r'^\s*vars\s*$', inp):
                 print("\nUser-defined Variables")
@@ -43,11 +43,11 @@ def main():
                 print(f"frac_max_length -> {settings.get('frac_max_length')}\n")
             elif m := re.match(r'\s*prec(?:ision)?\s(\d+)$', inp):
                 settings.set("working_precision", int(m.group(1)))
-                working_epsilon = Number(1, 10 ** settings.get('working_precision'), fcf=False)
+                working_epsilon = RealNumber(1, 10 ** settings.get('working_precision'), fcf=False)
                 print(f"working_precision -> {settings.get('working_precision')}\n")
             elif m := re.match(r'\s*disp\s(\d+)$', inp):
                 settings.set("final_precision", int(m.group(1)))
-                final_epsilon = Number(1, 10 ** settings.get('final_precision'), fcf=False)
+                final_epsilon = RealNumber(1, 10 ** settings.get('final_precision'), fcf=False)
                 print(f"final_precision -> {settings.get('final_precision')}\n")
             elif m := re.match(r'\s*debug(?:\s+(\w+))?$', inp):
                 flag = {'on':True, 'off':False}.get(m.group(1) if m.group(1) is None else m.group(1).lower())
@@ -63,7 +63,7 @@ def main():
                 expr = parse(inp, debug=False)
                 if expr is None: continue
                 val = expr.value(main_mem, working_epsilon, debug=settings.get('debug'))
-                if isinstance(val, Number): val = val.fast_continued_fraction(epsilon=final_epsilon)
+                if isinstance(val, RealNumber): val = val.fast_continued_fraction(epsilon=final_epsilon)
                 main_mem.add('ans', val)
                 print(val.disp(settings.get('frac_max_length'), settings.get('final_precision')), end="\n\n")
             if main_mem._vars_version != current_ver:

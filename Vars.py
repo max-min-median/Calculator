@@ -17,7 +17,7 @@ class Var(Value):
         super().__init__(name=name)
 
     def value(self, *args, mem=None, **kwargs):
-        from Errors import EvaluationError
+        from errors import EvaluationError
         if mem is None: raise EvaluationError(f"No memory provided to Var object '{self.name}'")
         val = mem.get(self.name)
         if val is None: raise EvaluationError(f"Variable '{self.name}' not found in memory!")
@@ -43,10 +43,10 @@ class WordToken:
         return str(self.name)
     
     def split_word_token(self, mem, next_token):
-        from Operators import Prefix
-        from Numbers import Number
-        from Functions import Function
-        from Errors import ParseError
+        from operators import Prefix
+        from number import RealNumber
+        from functions import Function
+        from errors import ParseError
         # returns a list of possible splits of the string.
         # 'greediest' (longer tokens are prioritized) splits come first.
         def try_split(s, num_allowed=False, only_funcs_allowed=False):
@@ -54,12 +54,12 @@ class WordToken:
             lst, var_lst = [], []
             for i in reversed(range(len(s))):
                 if (this_word := s[:i+1]) in word_dict:
-                    if isinstance(word_dict[this_word], Number): this_word = Var(this_word)
+                    if isinstance(word_dict[this_word], RealNumber): this_word = Var(this_word)
                     else: this_word = word_dict[this_word]
                     if only_funcs_allowed and type(this_word) != Function: continue
                     if i == len(s) - 1 and type(this_word) == Prefix and not isinstance(next_token, Value): continue  # allow stuff like 'ksin3.0pi'
                 elif num_allowed and not only_funcs_allowed and s[:i+1].isdigit() and not s[i+1:i+2].isdigit():
-                    this_word = Number(s[:i+1])
+                    this_word = RealNumber(s[:i+1])
                 else:
                     continue
                 split_rest, split_rest_vars = try_split(s[i+1:], num_allowed=(type(this_word) == Prefix), only_funcs_allowed=(type(this_word) == Function))
@@ -73,19 +73,22 @@ class WordToken:
         if len(split_lst) == 0: raise ParseError(f"Unable to parse '{self.name}'")
         tmp = ['∙'.join(s) for s in split_lst]
         if len(split_lst) > 1:
-            print(f"Warning: Found multiple ways to parse '{self.name}': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
+            from UI import UI
+            ui = UI.getInstance()
+            ui.addText("display", ("Warning: ", UI.YELLOW_ON_BLACK), (f"Found {len(split_lst)} ways to parse ", ), (self.name, UI.BRIGHT_PURPLE_ON_BLACK), (':', ))
+            # ': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
         return split_lst[0], var_lst[0]
 
     def to_LValue(self):
         return LValue(name=self.name)
 
     def to_LFunc(self):
-        from Functions import LFunc
+        from functions import LFunc
         return LFunc(name=self.name)
     
     @property
     def memory(self):
-        from Memory import Memory
+        from memory import Memory
         if self.func_mem is not None: word_dict = Memory.combine(self.user_mem, self.func_mem)
         else: word_dict = self.user_mem.full
         return word_dict

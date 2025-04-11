@@ -1,8 +1,8 @@
-from Operators import *
-import Op
-from Vars import Value, Var, WordToken, LValue
-from Errors import CalculatorError, ParseError
-from Functions import Function
+from operators import *
+import op
+from vars import Value, Var, WordToken, LValue
+from errors import CalculatorError, ParseError
+from functions import Function
 
 
 class Expression(Value):
@@ -45,9 +45,9 @@ class Expression(Value):
             while True:
                 token = self.parsed[index]
                 if isinstance(token, WordToken):
-                    if self.parsed[index+1] == Op.assignment:
+                    if self.parsed[index+1] == op.assignment:
                         self.parsed[index] = token.to_LValue()
-                    elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == Op.assignment:  # make a function
+                    elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
                         self.parsed[index] = token.to_LFunc()
                     else:
                         split_lst, var_lst = token.split_word_token(mem, self.parsed[index+1])
@@ -67,11 +67,11 @@ class Expression(Value):
                     # non-Fn-non-Fn : High
                     # Fn-Fn : High
                     case Function(), Expression():
-                        token = Op.function_invocation
+                        token = op.function_invocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
-                        token = Op.implicit_mult_prefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
+                        token = op.implicit_mult_prefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
                     case Value(), Value() | Expression():
-                        token = Op.implicit_mult
+                        token = op.implicit_mult
                 match token:
                     case Operator() if token.power[0] <= power: return L, index - 1
                     case Prefix():
@@ -81,16 +81,16 @@ class Expression(Value):
                         L = try_operate(L, mem=mem, epsilon=epsilon)
                     case Infix():
                         old_index = index
-                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [Op.implicit_mult, Op.implicit_mult_prefix, Op.function_invocation]), skip_eval = skip_eval or token == Op.logical_and and L.sign == 0 or token == Op.logical_or and L.sign != 0)
-                        if token == Op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.pos_of_elem(old_index))
-                        elif token != Op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.pos_of_elem(old_index))
+                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicit_mult, op.implicit_mult_prefix, op.function_invocation]), skip_eval = skip_eval or token == op.logical_and and L.sign == 0 or token == op.logical_or and L.sign != 0)
+                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.pos_of_elem(old_index))
+                        elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.pos_of_elem(old_index))
                         else: L = try_operate(L, exp, mem=mem, epsilon=epsilon)
                     case None:
                         return L, index - 1
                 index += 1
 
         match self.tokens[:3]:  # create new function
-            case WordToken(), Expression(), Op.assignment:
+            case WordToken(), Expression(), op.assignment:
                 if isinstance(mem, dict):
                     name = self.tokens[0].name
                     mem[name] = (fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
@@ -103,11 +103,11 @@ class Expression(Value):
         return evaluate()[0]
             
     def __str__(self):
-        from Numbers import Number
+        from number import RealNumber
         if self.display_string == '':
             prev_token = None
             for token in self.tokens:
-                if isinstance(prev_token, (Number, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.display_string += '⋅' + str(token)
+                if isinstance(prev_token, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.display_string += '⋅' + str(token)
                 else: self.display_string += str(token)
                 prev_token = token
             self.display_string = self.brackets[:1] + self.display_string + self.brackets[1:]
@@ -126,9 +126,9 @@ class Tuple(Expression):
         return tup
 
     def disp(self, frac_max_length, final_precision):
-        from Numbers import Number
-        final_epsilon = Number(1, 10 ** final_precision, fcf=False)
-        temp_tokens = [token.fast_continued_fraction(epsilon=final_epsilon) if isinstance(token, Number) else token for token in self.tokens]
+        from number import RealNumber
+        final_epsilon = RealNumber(1, 10 ** final_precision, fcf=False)
+        temp_tokens = [token.fast_continued_fraction(epsilon=final_epsilon) if isinstance(token, RealNumber) else token for token in self.tokens]
         self.display_string = self.brackets[:1] + ', '.join([x.disp(frac_max_length, final_precision) for x in temp_tokens]) + self.brackets[1:]
         return self.display_string
 

@@ -1,5 +1,5 @@
-from Vars import Value
-from Errors import ParseError, EvaluationError
+from vars import Value
+from errors import ParseError, EvaluationError
 
 # Functions must be followed by bracketed expressions, unlike Unary_Left_Operators.
 # Trig fns and sqrt are therefore treated as Unary_Left_Operators.
@@ -9,8 +9,8 @@ from Errors import ParseError, EvaluationError
 
 class Function(Value):
     def __init__(self, name='<fn>', params=None, expr=None):
-        from Expressions import Tuple
-        from Vars import WordToken
+        from expressions import Tuple
+        from vars import WordToken
         self.name = name
         self.function = self.invoke
         self.func_list = [self]
@@ -39,8 +39,8 @@ class Function(Value):
 
     def invoke(self, tup_or_expr, mem=None, epsilon=None, debug=False):
         if mem is None:  raise EvaluationError(f"No memory passed to function '{self.name}'")
-        from Expressions import Tuple
-        from Memory import Memory
+        from expressions import Tuple
+        from memory import Memory
         func_inputs = [] if tup_or_expr is None else \
                       [tup_or_expr] if not isinstance(tup_or_expr, Tuple) else \
                       tup_or_expr.tokens  # to make func_inputs a list of Expressions.
