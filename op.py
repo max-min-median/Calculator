@@ -64,6 +64,7 @@ def lnFn(x, **kwargs):
     if x == zero: raise CalculatorError(f'ln 0 is undefined.')
     # ln(re^iθ) = ln r + iθ
     if isinstance(x, ComplexNumber): return ComplexNumber(lnFn(abs(x)), x.arg())
+    if isinstance(x, RealNumber) and x < zero: return ComplexNumber(lnFn(abs(x)), pi)
     if x < one: return -lnFn(one / x, **kwargs)
     result = zero
     while x > ten:
