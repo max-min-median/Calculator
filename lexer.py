@@ -14,16 +14,16 @@ class Lexer:
     def __init__(self, expr_string='', mem=None):
         if mem is None: from memory import Memory; mem = Memory(test=True) # raise TypeError('No memory provided to lexer!')
         self._tokens = []
-        self._pos_list = []
+        self._posList = []
         self._pos = 0
         self.current_string = self.expr_string = expr_string
     
     def next(self):
-        if len(self._tokens) > 0: return self._tokens.pop(0), self._pos_list.pop(0)
+        if len(self._tokens) > 0: return self._tokens.pop(0), self._posList.pop(0)
         else: return self.prep_next_token().next()
 
     def peek(self):
-        if len(self._tokens) > 0: return self._tokens[0], self._pos_list[0]
+        if len(self._tokens) > 0: return self._tokens[0], self._posList[0]
         else: return self.prep_next_token().peek()
 
     def prep_next_token(self):
@@ -31,14 +31,14 @@ class Lexer:
         def add_token(t, m):
             print(f'{self._pos:2d}: {t}')
             self._tokens.append(t)
-            self._pos_list.append(self._pos + m.span(1)[0])
+            self._posList.append(self._pos + m.span(1)[0])
             self._pos += m.span()[1]
             self.current_string = self.current_string[m.span()[1]:]
             return self
 
         if self.current_string == '':
             self._tokens.append(None)
-            self._pos_list.append(None)
+            self._posList.append(None)
             return self
                 
         if m := re.match(r'([(){}[\]])', self.current_string):
@@ -75,9 +75,9 @@ def parse(s, start_pos=0, brackets='', mem=None, debug=False):
         return None
 
     expr = Expression(brackets=brackets, mem=mem)
-    tokens, pos_list = expr.tokens, expr.token_pos
+    tokens, pos_list = expr.tokens, expr.tokenPos
     expr.start_pos = start_pos
-    expr.input_string = s
+    expr.inputStr = s
     pos = 0
 
     while s:
@@ -89,7 +89,7 @@ def parse(s, start_pos=0, brackets='', mem=None, debug=False):
             s = s[len(tokens[-1].input_string) + 2:]
         elif s[0] in ')]}': # end of bracketed expression
             if brackets and s[0] in brackets:
-                expr.input_string = expr.input_string[:pos]
+                expr.inputStr = expr.inputStr[:pos]
                 break
             else:
                 raise ParseError(f'Unmatched right delimiter "{s[0]}" at pos {start_pos + pos}')
@@ -115,7 +115,7 @@ def parse(s, start_pos=0, brackets='', mem=None, debug=False):
     # if brackets and s == '': raise BracketMismatchError(f'Unpaired left delimiter "{brackets[0]}" at pos {start_pos}')
     if not brackets and not tokens: return None
 
-    expr.tokens, expr.token_pos = validate(tokens, pos_list, brackets=brackets)
+    expr.tokens, expr.tokenPos = validate(tokens, pos_list, brackets=brackets)
 
     match tokens[:3]:
         case [WordToken(), Expression(), Op.assignment]:  # function to be assigned

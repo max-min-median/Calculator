@@ -1,90 +1,92 @@
+from settings import Settings
 from operators import *
 import op
 from vars import Value, Var, WordToken, LValue
 from errors import CalculatorError, ParseError
 from functions import Function
 
+st = Settings()
 
 class Expression(Value):
-    def __init__(self, input_string=None, brackets='', parent=None, parent_offset=0):
-        self.input_string = input_string  # only the part of the string relevant to this Expression.
+    def __init__(self, inputStr=None, brackets='', parent=None, parentOffset=0):
+        self.inputStr = inputStr  # only the part of the string relevant to this Expression.
         self.tokens = []
-        self.token_pos = []  # position of individual tokens within this Expression.
+        self.tokenPos = []  # position of individual tokens within this Expression.
         self.parsed = None
-        self.parsed_pos = None
+        self.parsedPos = None
         self.brackets = brackets  # 2-char string, '()', '[]', '{}' or an empty string.
-        self.parent = parent  # parent_obj
-        self.parent_offset = parent_offset  # position of this Expression relative to parent
-        self.display_string = ''
+        self.parent = parent  # parent object
+        self.parentOffset = parentOffset  # position of this Expression relative to parent
+        self.displayStr = ''
 
-    def pos_of_elem(self, i=None, tup=None):  # returns a tuple describing the position of the i-th element in the full string.
-        tup_to_use = tup if tup is not None else self.parsed_pos[i] if self.parsed_pos is not None else self.token_pos[i]
-        return tuple(self.offset + x for x in tup_to_use)
+    def posOfElem(self, i=None, tup=None):  # returns a tuple describing the position of the i-th element in the full string.
+        tupToUse = tup if tup is not None else self.parsedPos[i] if self.parsedPos is not None else self.tokenPos[i]
+        return tuple(self.offset + x for x in tupToUse)
 
     @property
     def offset(self):
-        return self.parent_offset + (0 if self.parent is None else self.parent.offset)
+        return self.parentOffset + (0 if self.parent is None else self.parent.offset)
 
     @property
     def pos(self):
-        return (self.offset, self.offset + len(self.input_string))
+        return (self.offset, self.offset + len(self.inputStr))
 
-    def value(self, mem, epsilon, debug=False):
+    def value(self, mem, debug=False):
         dummy = Var('dummy')
 
-        def evaluate(power=0, index=0, skip_eval=False):  # returns (Value, end_index)
-            def try_operate(L, *args, **kwargs):
+        def evaluate(power=0, index=0, skipEval=False):  # returns (Value, endIndex)
+            def tryOperate(L, *args, **kwargs):
                 try:
-                    ret = skip_eval and dummy or token.function(L, *args, **kwargs)
+                    ret = skipEval and dummy or token.function(L, *args, **kwargs)
                     debug and print(f"{str(token).strip(): ^3}:", ', '.join((str(L),) + tuple(str(a) for a in args)))
                     return ret
                 except CalculatorError as e:
-                    raise (type(e))(e.args[0], self.pos_of_elem(index))
+                    raise (type(e))(e.args[0], self.posOfElem(index))
                 
             L = None
             while True:
                 token = self.parsed[index]
                 if isinstance(token, WordToken):
                     if self.parsed[index+1] == op.assignment:
-                        self.parsed[index] = token.to_LValue()
+                        self.parsed[index] = token.toLValue()
                     elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
-                        self.parsed[index] = token.to_LFunc()
+                        self.parsed[index] = token.toLFunc()
                     else:
-                        split_lst, var_lst = token.split_word_token(mem, self.parsed[index+1])
-                        self.parsed[index:index+1] = var_lst
+                        splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
+                        self.parsed[index:index+1] = varList
                         prev = 0
-                        self.parsed_pos[index:index+1] = [(self.parsed_pos[index][0] + prev, self.parsed_pos[index][0] + (prev := prev + len(s))) for s in ([''] + split_lst)[:-1]]
+                        self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]
                     continue
                 match L, token:
                     case None, Value():
-                        L = skip_eval and dummy or token.value(mem=mem, epsilon=epsilon)
+                        L = skipEval and dummy or token.value(mem=mem)
                         index += 1
                         continue
                     case None, Postfix() | Infix():
-                        raise ParseError(f"Unexpected operator '{token.name}'", self.pos_of_elem(index))
+                        raise ParseError(f"Unexpected operator '{token.name}'", self.posOfElem(index))
                     # non-Fn-Fn : Low
                     # non-Fn-Prefix : Low
                     # non-Fn-non-Fn : High
                     # Fn-Fn : High
                     case Function(), Expression():
-                        token = op.function_invocation
+                        token = op.functionInvocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
-                        token = op.implicit_mult_prefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
+                        token = op.implicitMultPrefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
                     case Value(), Value() | Expression():
-                        token = op.implicit_mult
+                        token = op.implicitMult
                 match token:
                     case Operator() if token.power[0] <= power: return L, index - 1
                     case Prefix():
-                        L, index = evaluate(power=token.power[1], index=index+1, skip_eval=skip_eval)
-                        L = try_operate(L, mem=mem, epsilon=epsilon)
+                        L, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval)
+                        L = tryOperate(L, mem=mem)
                     case Postfix():
-                        L = try_operate(L, mem=mem, epsilon=epsilon)
+                        L = tryOperate(L, mem=mem)
                     case Infix():
-                        old_index = index
-                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicit_mult, op.implicit_mult_prefix, op.function_invocation]), skip_eval = skip_eval or token == op.logical_and and L.sign == 0 or token == op.logical_or and L.sign != 0)
-                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.pos_of_elem(old_index))
-                        elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.pos_of_elem(old_index))
-                        else: L = try_operate(L, exp, mem=mem, epsilon=epsilon)
+                        oldIndex = index
+                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and L.sign == 0 or token == op.logicalOR and L.sign != 0)
+                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(oldIndex))
+                        elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
+                        else: L = tryOperate(L, exp, mem=mem)
                     case None:
                         return L, index - 1
                 index += 1
@@ -99,46 +101,44 @@ class Expression(Value):
                 return fn
             
         self.parsed = self.parsed or (self.tokens + [None, None])
-        self.parsed_pos = self.parsed_pos or (self.token_pos + [(9999, 9999), (9999, 9999)])
+        self.parsedPos = self.parsedPos or (self.tokenPos + [(9999, 9999), (9999, 9999)])
         return evaluate()[0]
             
     def __str__(self):
         from number import RealNumber
-        if self.display_string == '':
-            prev_token = None
+        if self.displayStr == '':
+            prevToken = None
             for token in self.tokens:
-                if isinstance(prev_token, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.display_string += '⋅' + str(token)
-                else: self.display_string += str(token)
-                prev_token = token
-            self.display_string = self.brackets[:1] + self.display_string + self.brackets[1:]
-        return self.display_string
+                if isinstance(prevToken, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.displayStr += '⋅' + str(token)
+                else: self.displayStr += str(token)
+                prevToken = token
+            self.displayStr = self.brackets[:1] + self.displayStr + self.brackets[1:]
+        return self.displayStr
 
 
 class Tuple(Expression):
 
-    def __init__(self, input_string=None, brackets='()', parent=None, parent_offset=0):
-        super().__init__(input_string=input_string, brackets=brackets, parent=parent, parent_offset=parent_offset)
+    def __init__(self, inputStr=None, brackets='()', parent=None, parentOffset=0):
+        super().__init__(inputStr=inputStr, brackets=brackets, parent=parent, parentOffset=parentOffset)
 
     @staticmethod
-    def from_first(expr):
-        tup = Tuple(input_string=expr.input_string, brackets=expr.brackets, parent=expr.parent, parent_offset=expr.parent_offset)
+    def fromFirst(expr):
+        tup = Tuple(inputStr=expr.inputStr, brackets=expr.brackets, parent=expr.parent, parentOffset=expr.parentOffset)
         tup.tokens = [expr]
         return tup
 
-    def disp(self, frac_max_length, final_precision):
-        from number import RealNumber
-        final_epsilon = RealNumber(1, 10 ** final_precision, fcf=False)
-        temp_tokens = [token.fast_continued_fraction(epsilon=final_epsilon) if isinstance(token, RealNumber) else token for token in self.tokens]
-        self.display_string = self.brackets[:1] + ', '.join([x.disp(frac_max_length, final_precision) for x in temp_tokens]) + self.brackets[1:]
-        return self.display_string
+    def disp(self):
+        tempTokens = [token.fastContinuedFraction(epsilon=st.finalEpsilon) if hasattr(token, 'fastContinuedFraction') else token for token in self.tokens]
+        self.displayStr = self.brackets[:1] + ', '.join([x.disp() for x in tempTokens]) + self.brackets[1:]
+        return self.displayStr
 
     def __str__(self):
-        if self.display_string == '':
-            self.display_string = self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
-        return self.display_string
+        if self.displayStr == '':
+            self.displayStr = self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
+        return self.displayStr
 
-    def value(self, mem=None, epsilon=None, debug=False):
-        tup = Tuple(input_string=self.input_string, brackets=self.brackets, parent=self.parent, parent_offset=self.parent_offset)
-        tup.token_pos = self.token_pos
-        tup.tokens = [expr.value(mem=mem, epsilon=epsilon, debug=debug) for expr in self.tokens]
+    def value(self, mem=None):
+        tup = Tuple(inputStr=self.inputStr, brackets=self.brackets, parent=self.parent, parentOffset=self.parentOffset)
+        tup.tokenPos = self.tokenPos
+        tup.tokens = [expr.value(mem=mem) for expr in self.tokens]
         return tup

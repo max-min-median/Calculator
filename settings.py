@@ -1,19 +1,35 @@
 from errors import SettingsError
 import json
 
+
 class Settings:
 
-    def __init__(self, filename=None):
-        if filename is None: raise SettingsError("No settings file provided!")
+    _instance = None
+
+    def __new__(cls, filename=None):
+        if cls._instance is None: cls._instance = super().__new__(cls)
+        if filename is not None: cls._instance._loadFile(filename)
+        return cls._instance
+
+    def _loadFile(self, filename=None):
+        from number import RealNumber
         with open(filename) as f: self._settings = json.loads(f.readline())
         self._filename = filename
+        self.epsilon = RealNumber(1, 10 ** self._settings['working_precision'], fcf=False)
+        self.finalEpsilon = RealNumber(1, 10 ** self._settings['final_precision'], fcf=False)
         self._version = 0
 
     def set(self, key, value):
-        if key not in self._settings:
-            raise SettingsError("key '{key}' not found in settings")
+        if key not in self._settings: raise SettingsError("key '{key}' not found in settings")
         self._settings[key] = value
-        with open(self._filename, "w") as f: f.write(json.dumps(self._settings))
+        from number import RealNumber
+        if key == 'working_precision':
+            self.epsilon = RealNumber(1, 10 ** value, fcf=False)
+        elif key == 'final_precision':
+            self.finalEpsilon = RealNumber(1, 10 ** value, fcf=False)
+        
+        with open(self._filename, "w") as f:
+            f.write(json.dumps(self._settings))
 
     def get(self, key):
         if key not in self._settings:

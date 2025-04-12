@@ -6,7 +6,7 @@ class Value:
     def __str__(self):
         return self.name
 
-    def disp(self, frac_max_length, final_precision):
+    def disp(self, fracMaxLength, finalPrecision):
         return str(self)
 
     def value(self, *args, **kwargs):
@@ -24,74 +24,73 @@ class Var(Value):
         return val
     
 class LValue(Value):  # variable ready for assignment. Has NO value
-    def __init__(self, name='<l_value>', value=None):
+    def __init__(self, name='<lValue>', value=None):
         super().__init__(name=name, value=value)
 
     def value(self, *args, **kwargs):
         # return self._value if self._value is not None else self.name
         return self
 
-    def make_var(self, value=None):
+    def makeVar(self, value=None):
         if value is None: raise ValueError(f'No value to assign to "{self.name}"')
         return Var(name=self.name, value=value)
 
 class WordToken:
-    def __init__(self, name='<word_token>'):
+    def __init__(self, name='<wordToken>'):
         self.name = name
 
     def __str__(self):
         return str(self.name)
     
-    def split_word_token(self, mem, next_token):
+    def splitWordToken(self, mem, nextToken):
         from operators import Prefix
         from number import RealNumber
         from functions import Function
         from errors import ParseError
         # returns a list of possible splits of the string.
         # 'greediest' (longer tokens are prioritized) splits come first.
-        def try_split(s, num_allowed=False, only_funcs_allowed=False):
+        def trySplit(s, numAllowed=False, onlyFuncsAllowed=False):
             if s == '': return [[]], [[]]
-            lst, var_lst = [], []
+            lst, varList = [], []
             for i in reversed(range(len(s))):
-                if (this_word := s[:i+1]) in word_dict:
-                    if isinstance(word_dict[this_word], RealNumber): this_word = Var(this_word)
-                    else: this_word = word_dict[this_word]
-                    if only_funcs_allowed and type(this_word) != Function: continue
-                    if i == len(s) - 1 and type(this_word) == Prefix and not isinstance(next_token, Value): continue  # allow stuff like 'ksin3.0pi'
-                elif num_allowed and not only_funcs_allowed and s[:i+1].isdigit() and not s[i+1:i+2].isdigit():
-                    this_word = RealNumber(s[:i+1])
+                if (thisWord := s[:i+1]) in wordDict:
+                    if isinstance(wordDict[thisWord], RealNumber): thisWord = Var(thisWord)
+                    else: thisWord = wordDict[thisWord]
+                    if onlyFuncsAllowed and type(thisWord) != Function: continue
+                    if i == len(s) - 1 and type(thisWord) == Prefix and not isinstance(nextToken, Value): continue  # allow stuff like 'ksin3.0pi'
+                elif numAllowed and not onlyFuncsAllowed and s[:i+1].isdigit() and not s[i+1:i+2].isdigit():
+                    thisWord = RealNumber(s[:i+1])
                 else:
                     continue
-                split_rest, split_rest_vars = try_split(s[i+1:], num_allowed=(type(this_word) == Prefix), only_funcs_allowed=(type(this_word) == Function))
-                lst += [[s[:i+1]] + spl for spl in split_rest]
-                var_lst += [[this_word] + spl for spl in split_rest_vars]
-            return lst, var_lst
+                splitRest, splitRestVars = trySplit(s[i+1:], numAllowed=(type(thisWord) == Prefix), onlyFuncsAllowed=(type(thisWord) == Function))
+                lst += [[s[:i+1]] + spl for spl in splitRest]
+                varList += [[thisWord] + spl for spl in splitRestVars]
+            return lst, varList
         
-        word_dict = mem if isinstance(mem, dict) else mem.update
-        split_lst, var_lst = try_split(self.name)
+        wordDict = mem if isinstance(mem, dict) else mem.update
+        splitList, varList = trySplit(self.name)
 
-        if len(split_lst) == 0: raise ParseError(f"Unable to parse '{self.name}'")
-        tmp = ['∙'.join(s) for s in split_lst]
-        if len(split_lst) > 1:
+        if len(splitList) == 0: raise ParseError(f"Unable to parse '{self.name}'")
+        tmp = ['∙'.join(s) for s in splitList]
+        if len(splitList) > 1:
             from UI import UI
-            ui = UI.getInstance()
-            ui.addText("display", ("Warning: ", UI.YELLOW_ON_BLACK), (f"Found {len(split_lst)} ways to parse ", ), (self.name, UI.BRIGHT_PURPLE_ON_BLACK), (':', ))
+            UI().addText("display", ("Warning: ", UI.YELLOW_ON_BLACK), (f"Found {len(splitList)} ways to parse ", ), (self.name, UI.BRIGHT_PURPLE_ON_BLACK), (':', ))
             # ': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
-        return split_lst[0], var_lst[0]
+        return splitList[0], varList[0]
 
-    def to_LValue(self):
+    def toLValue(self):
         return LValue(name=self.name)
 
-    def to_LFunc(self):
+    def toLFunc(self):
         from functions import LFunc
         return LFunc(name=self.name)
     
     @property
     def memory(self):
         from memory import Memory
-        if self.func_mem is not None: word_dict = Memory.combine(self.user_mem, self.func_mem)
-        else: word_dict = self.user_mem.full
-        return word_dict
+        if self.funcMem is not None: wordDict = Memory.combine(self.userMem, self.funcMem)
+        else: wordDict = self.userMem.full
+        return wordDict
 
     pass
 

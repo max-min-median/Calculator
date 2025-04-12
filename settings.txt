@@ -1,1 +1,1 @@
-{"frac_max_length": 15, "debug": false, "working_precision": 20, "final_precision": 15}
+{"frac_max_length": 15, "debug": false, "working_precision": 25, "final_precision": 20}

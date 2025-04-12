@@ -8,14 +8,14 @@ class Memory:
     # Parser requires access to memory
     # Expressions requires access to memory
 
-    base_list = {'e': e,
+    baseList = {'e': e,
                  'pi': pi,
                  'i': imag_i,
                  'P': op.permutation,   # These are here so that
                  'C': op.combination,   # they are overrideable.
     }
 
-    top_list = {'sin': op.sin,   # These override user vars
+    topList = {'sin': op.sin,   # These override user vars
                 'cosec': op.csc,
                 'csc': op.csc,
                 'cos': op.cos,
@@ -36,43 +36,43 @@ class Memory:
                 'lg': op.lg,
     }
 
-    def __init__(self, settings, filename=None):
+    def __init__(self, filename=None):
         self._vars = {}
-        self._vars_version = 0
-        self._full_version = 0
+        self._varsVersion = 0
+        self._fullVersion = 0
         self._full = Memory.combine()
         self.trie = None
-        if filename is not None: self.load(filename, settings)
+        if filename is not None: self.load(filename)
         # for testing
 
     def get(self, str):
         return self.update[str] if str in self.update else None
     
     def add(self, str, val):
-        need_sort = True if str not in self._vars else False
+        needSort = True if str not in self._vars else False
         self._vars[str] = val
         if self.trie is not None: self.trie.insert(str)
-        if need_sort:
+        if needSort:
             self._vars = {k: self._vars[k] for k in sorted(self._vars, key=lambda x: (-len(x), x))}
-        self._vars_version += 1
+        self._varsVersion += 1
 
     def delete(self, string):
-        str_list = string.replace(',', ' ').split()
+        strList = string.replace(',', ' ').split()
         deleted = []
-        for s in str_list:
+        for s in strList:
             if s in self._vars:
                 del self._vars[s]
                 deleted.append(s)
-                if s not in self.base_list:
+                if s not in self.baseList:
                     self.trie.delete(s)
-        if deleted: self._vars_version += 1
+        if deleted: self._varsVersion += 1
         return deleted
     
     def save(self, filename):
         from functions import Function, FuncComposition
         with open(filename, "w") as f:
-            for var in self.own_list:
-                value = self.own_list[var]
+            for var in self.ownList:
+                value = self.ownList[var]
                 if isinstance(value, RealNumber):
                     f.write(f"{var} = {str(value)}\n")
                 elif isinstance(value, FuncComposition):
@@ -80,18 +80,17 @@ class Memory:
                 elif isinstance(value, Function):
                     f.write(f"{str(value)}\n")
 
-    def load(self, settings, filename):
+    def load(self, filename):
         import parser
-        working_epsilon = RealNumber(1, 10 ** settings.get('working_precision'), fcf=False)
         with open(filename) as f:
             for line in f:
-                parser.parse(line).value(mem=self, epsilon=working_epsilon, debug=False)
+                parser.parse(line).value(mem=self)
 
     @staticmethod
     def combine(*dicts):  # combines Memory objects and/or dictionaries and produces a dict
         # print("Combining dicts...")
-        combined_lst = [mem_or_dict.own_list if isinstance(mem_or_dict, Memory) else mem_or_dict for mem_or_dict in [Memory.base_list] + list(dicts) + [Memory.top_list]]
-        tmp = {k: d[k] for d in combined_lst for k in d}
+        combinedLst = [memOrDict.ownList if isinstance(memOrDict, Memory) else memOrDict for memOrDict in [Memory.baseList] + list(dicts) + [Memory.topList]]
+        tmp = {k: d[k] for d in combinedLst for k in d}
         # Predefined constants (e.g. pi) may be overridden by user-defined variables.
         # Predefined operators (sin, cos, tan) override user-defined variables.
         tmp = {k: tmp[k] for k in sorted(tmp, key=lambda x: (-len(x), x))}
@@ -99,11 +98,11 @@ class Memory:
 
     @property
     def update(self):
-        if self._full_version < self._vars_version:
+        if self._fullVersion < self._varsVersion:
             # print(f"Memory: updating full list...")
             self._full = Memory.combine(self._vars)
-            self._full_version = self._vars_version
+            self._fullVersion = self._varsVersion
         return self._full
 
     @property
-    def own_list(self): return self._vars
+    def ownList(self): return self._vars

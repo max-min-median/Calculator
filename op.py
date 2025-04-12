@@ -3,60 +3,61 @@ from functions import Function
 from errors import *
 from vars import LValue
 from number import *
+from settings import Settings
 
+st = Settings()
 
-def factorial_fn(n, **kwargs):
-    if not n.is_int(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
+def factorialFn(n, **kwargs):
+    if not n.isInt(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
     n = int(n)
     if n in (0, 1): return one
     for i in range(2, n): n *= i
     return RealNumber(n)
 
-def permutation_fn(n, r, **kwargs):  # nPr
-    return combination_fn(n, r, perm=True, **kwargs)
+def permutationFn(n, r, **kwargs):  # nPr
+    return combinationFn(n, r, perm=True, **kwargs)
 
-def combination_fn(n, r, perm=False, **kwargs):  # nCr
-    if not n.is_int() or not r.is_int(): raise CalculatorError(f'Combination function expects integers')
+def combinationFn(n, r, perm=False, **kwargs):  # nCr
+    if not n.isInt() or not r.isInt(): raise CalculatorError(f'Combination function expects integers')
     n, r = int(n), int(r)
     res = 1
     if n in (0, 1): return one
     for i in range(1, r + 1): res *= n + 1 - i; res //= i ** (not perm)
     return RealNumber(res)
 
-def exponentiation_fn(a, b, epsilon=None, *args, fcf=False, **kwargs):
+def exponentiationFn(a, b, *args, fcf=False, **kwargs):
     if isinstance(a, Function):
-        if b.is_int(): return a ** b
+        if b.isInt(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
     # print(f'Exponentiation: {str(a)} ^ {str(b)}')
     if a == zero:
         if b == zero: raise CalculatorError(f'0^0 is undefined')
         return zero
-    if b.sign == -1: return one / exponentiation_fn(a, -b, *args, epsilon, fcf, **kwargs)
-    if b.is_int(): return int_power(a, int(b), epsilon=epsilon, fcf=fcf)
+    if b.sign == -1: return one / exponentiationFn(a, -b, *args, fcf=fcf, **kwargs)
+    if b.isInt(): return intPower(a, int(b), fcf=fcf)
     if a.sign == -1: raise CalculatorError(f'Cannot raise a negative number {str(a)} to a fractional power {str(b)}')
     # a^b = e^(b ln a)
-    return exp(b * ln_fn(a, epsilon=epsilon), epsilon=epsilon)
+    return exp(b * lnFn(a))
 
-def int_power(base, power, *args, epsilon=None, fcf=False, **kwargs):
-    if not isinstance(power, int): raise CalculatorError(f'int_power() expects integral power, received {power}')
+def intPower(base, power, *args, fcf=False, **kwargs):
+    if not isinstance(power, int): raise CalculatorError(f'intPower() expects integral power, received {power}')
     pow = abs(power)
-    int_part = one
+    result = one
     while pow > 0:
-        if pow & 1: int_part *= base
-        base = (base * base).fast_continued_fraction(epsilon=epsilon)
+        if pow & 1: result *= base
+        base = (base * base).fastContinuedFraction()
         pow >>= 1
-    if power & 1 == 1 and base.sign == -1: int_part = -int_part
-    return (one / int_part if power < 0 else int_part).fast_continued_fraction(epsilon=epsilon)
+    return (one / result if power < 0 else result).fastContinuedFraction()
 
-def exp(x, *args, epsilon=None, fcf=False, **kwargs):
-    int_part = int_power(e, int(x), epsilon=epsilon)
-    x = x.frac_part()
+def exp(x, *args, fcf=False, **kwargs):
+    intPart = intPower(e, int(x))
+    x = x.fracPart()
     sum = term = i = one
-    while (abs(term) >= epsilon):
+    while (abs(term) >= st.epsilon):
         term = (term * x) / i
         sum += term
         i += one
-    return int_part * sum.fast_continued_fraction(epsilon=epsilon)
+    return intPart * sum.fastContinuedFraction()
 
 # How to compute ln A?
 # ====================
@@ -68,9 +69,9 @@ def exp(x, *args, epsilon=None, fcf=False, **kwargs):
 # x = x0 - 1 + A/e^x0 <- Newton's Method
 # https://qr.ae/pYekgm
 
-def ln_fn(x, epsilon=None, **kwargs):
+def lnFn(x, **kwargs):
     if x <= zero: raise CalculatorError(f'ln can only apply to a positive number.')
-    if x < one: return -ln_fn(one / x, epsilon=epsilon, **kwargs)
+    if x < one: return -lnFn(one / x, **kwargs)
     ln2s = ln10s = zero
     while x > ten:
         x /= ten
@@ -79,94 +80,93 @@ def ln_fn(x, epsilon=None, **kwargs):
         x /= two
         ln2s += one
     x0 = zero
-    delta_x = epsilon * two
-    while abs(delta_x) > epsilon:
-        delta_x = x / exp(x0, epsilon=epsilon) - one
-        x0 = (x0 + delta_x).fast_continued_fraction(epsilon=epsilon)
-    return (ln10 * ln10s + ln2 * ln2s + x0).fast_continued_fraction(epsilon=epsilon)
+    dx = st.epsilon * two
+    while abs(dx) > st.epsilon:
+        dx = x / exp(x0) - one
+        x0 = (x0 + dx).fastContinuedFraction()
+    return (ln10 * ln10s + ln2 * ln2s + x0).fastContinuedFraction()
 
-def sin_fn(x, epsilon=None, **kwargs):
-    if x < zero: return -sin_fn(-x, epsilon=epsilon, **kwargs)
+def sinFn(x, **kwargs):
+    if x < zero: return -sinFn(-x, **kwargs)
     x = x % (pi * two)
-    if x > pi * three / two: return -sin_fn(pi * two - x, epsilon=epsilon, **kwargs)
-    elif x > pi: return -sin_fn(x - pi, epsilon=epsilon, **kwargs)
-    elif x > pi / two: return sin_fn(pi - x, epsilon=epsilon, **kwargs)
-    sum = x_pow = delta_x = x
-    x_sq = -x * x
+    if x > pi * three / two: return -sinFn(pi * two - x, **kwargs)
+    elif x > pi: return -sinFn(x - pi, **kwargs)
+    elif x > pi / two: return sinFn(pi - x, **kwargs)
+    sum = xPow = dx = x
+    xSq = -x * x
     mul = fac = one
-    while abs(delta_x) > epsilon:
+    while abs(dx) > st.epsilon:
         mul += two
         fac *= mul * (mul - one)
-        x_pow *= x_sq
-        delta_x = (x_pow / fac).fast_continued_fraction(epsilon=epsilon)
-        sum += delta_x
-    return sum.fast_continued_fraction(epsilon=epsilon)
+        xPow *= xSq
+        dx = (xPow / fac).fastContinuedFraction()
+        sum += dx
+    return sum.fastContinuedFraction()
 
-def cos_fn(x, epsilon=None, **kwargs):
-    return sin_fn(pi / two - x, epsilon=epsilon, **kwargs)
+def cosFn(x, **kwargs):
+    return sinFn(pi / two - x)
 
-def tan_fn(x, epsilon=None, **kwargs):
-    return sin_fn(x, epsilon=epsilon, **kwargs) / cos_fn(x, epsilon=epsilon, **kwargs)
+def tanFn(x, **kwargs):
+    return sinFn(x) / cosFn(x)
 
-def sec_fn(x, epsilon=None, **kwargs):
-    return one / cos_fn(x, epsilon=epsilon, **kwargs)
+def secFn(x, **kwargs):
+    return one / cosFn(x)
 
-def csc_fn(x, epsilon=None, **kwargs):
-    return one / sin_fn(x, epsilon=epsilon, **kwargs)
+def cscFn(x, **kwargs):
+    return one / sinFn(x)
 
-def cot_fn(x, epsilon=None, **kwargs):
-    return one / tan_fn(x, epsilon=epsilon, **kwargs)
+def cotFn(x, **kwargs):
+    return one / tanFn(x)
 
-def sinh_fn(x, epsilon=None, **kwargs):
-    return ((ex := exp(x, epsilon=epsilon)) - one / ex) / two
+def sinhFn(x, **kwargs):
+    return ((ex := exp(x)) - one / ex) / two
 
-def cosh_fn(x, epsilon=None, **kwargs):
-    return ((ex := exp(x, epsilon=epsilon)) + one / ex) / two
+def coshFn(x, **kwargs):
+    return ((ex := exp(x)) + one / ex) / two
 
-def tanh_fn(x, epsilon=None, **kwargs):
-    return ((e2x := exp(two * x, epsilon=epsilon)) - one) / (e2x + one)
+def tanhFn(x, **kwargs):
+    return ((e2x := exp(two * x)) - one) / (e2x + one)
 
 
-def arcsin_fn(x, epsilon=None, **kwargs):
+def arcsinFn(x, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
-    if x.sign == -1: return -arcsin_fn(-x, epsilon=epsilon, **kwargs)
+    if x.sign == -1: return -arcsinFn(-x, **kwargs)
     if x > one: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
-    if x * x > -x * x + one: return pi / two - arcsin_fn(exponentiation_fn(-x * x + one, half, epsilon=epsilon), epsilon=epsilon, **kwargs)
+    if x * x > -x * x + one: return pi / two - arcsinFn(exponentiationFn(-x * x + one, half), **kwargs)
     sum = term = x
     xsqr = x * x
-    four = RealNumber(4)
-    k = RealNumber(0)
-    while abs(term) > epsilon:
+    k = zero
+    while abs(term) > st.epsilon:
         k += one
         term *= xsqr * (k * two) * (k * two - one) / four / k / k
-        term = term.fast_continued_fraction(epsilon=epsilon)
+        term = term.fastContinuedFraction()
         sum += term / (k * two + one)
-        sum = sum.fast_continued_fraction(epsilon=epsilon)
+        sum = sum.fastContinuedFraction()
     return sum
 
-def arccos_fn(x, epsilon=None, **kwargs):
-    if x.sign == -1: return pi - arccos_fn(-x, epsilon=epsilon, **kwargs)
+def arccosFn(x, **kwargs):
+    if x.sign == -1: return pi - arccosFn(-x, **kwargs)
     if x > one: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
-    return pi / two - arcsin_fn(x, epsilon=epsilon, **kwargs)
+    return pi / two - arcsinFn(x, **kwargs)
 
-def arctan_fn(x, epsilon=None, **kwargs):
-    if x.sign == -1: return -arctan_fn(-x, epsilon=epsilon, **kwargs)
-    if x > one: return pi / two - arctan_fn(RealNumber(1) / x, epsilon=epsilon, **kwargs)
+def arctanFn(x, **kwargs):
+    if x.sign == -1: return -arctanFn(-x, **kwargs)
+    if x > one: return pi / two - arctanFn(one / x, **kwargs)
     # https://en.wikipedia.org/wiki/Arctangent_series
     sum = term = x / (x * x + one)
     factor = term * x
     num = two
-    while abs(term) > epsilon:
+    while abs(term) > st.epsilon:
         term *= factor
         term *= num
         term /= num + one
-        term = term.fast_continued_fraction(epsilon=epsilon)
+        term = term.fastContinuedFraction()
         sum += term
-        sum = sum.fast_continued_fraction(epsilon=epsilon)
+        sum = sum.fastContinuedFraction()
         num += two
     return sum
 
-def assignment_fn(L, R, mem=None, **kwargs):
+def assignmentFn(L, R, mem=None, **kwargs):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
     if isinstance(mem, dict):
@@ -175,191 +175,181 @@ def assignment_fn(L, R, mem=None, **kwargs):
         mem.add(L.name, R)
     return R
 
-assignment = Infix(' = ', assignment_fn)
-space_separator = Infix(' ', lambda x, y, *args, **kwargs: x * y)
-semicolon_separator = Infix('; ', lambda x, y, *args, **kwargs: y)
-permutation = Infix('P', permutation_fn)
-combination = Infix('C', combination_fn)
-ambiguous_plus = Operator('+?')
-ambiguous_minus = Operator('-?')
+assignment = Infix(' = ', assignmentFn)
+spaceSeparator = Infix(' ', lambda x, y, *args, **kwargs: x * y)
+semicolonSeparator = Infix('; ', lambda x, y, *args, **kwargs: y)
+permutation = Infix('P', permutationFn)
+combination = Infix('C', combinationFn)
+ambiguousPlus = Operator('+?')
+ambiguousMinus = Operator('-?')
 addition = Infix(' + ', lambda x, y, *args, **kwargs: x + y)
 subtraction = Infix(' - ', lambda x, y, *args, **kwargs: x - y)
 multiplication = Infix(' * ', lambda x, y, *args, **kwargs: x * y)
-implicit_mult = Infix('∙', lambda x, y, *args, **kwargs: x * y)
-implicit_mult_prefix = Infix('∙', lambda x, y, *args, **kwargs: x * y)
-frac_div = Infix('/', lambda x, y, *args, **kwargs: x / y)
+implicitMult = Infix('∙', lambda x, y, *args, **kwargs: x * y)
+implicitMultPrefix = Infix('∙', lambda x, y, *args, **kwargs: x * y)
+fracDiv = Infix('/', lambda x, y, *args, **kwargs: x / y)
 division = Infix(' / ', lambda x, y, *args, **kwargs: x / y)
 modulo = Infix(' % ', lambda x, y, *args, **kwargs: x % y)
 positive = Prefix('+', lambda x, *args, **kwargs: x)
 negative = Prefix('-', lambda x, *args, **kwargs: -x)
-lt = Infix(' < ', lambda x, y, *args, **kwargs: RealNumber(1) if x < y else RealNumber(0))
-lt_eq = Infix(' <= ', lambda x, y, *args, **kwargs: RealNumber(1) if x <= y else RealNumber(0))
-gt = Infix(' > ', lambda x, y, *args, **kwargs: RealNumber(1) if x > y else RealNumber(0))
-gt_eq = Infix(' >= ', lambda x, y, *args, **kwargs: RealNumber(1) if x >= y else RealNumber(0))
-eq = Infix(' == ', lambda x, y, *args, **kwargs: RealNumber(1) if x == y else RealNumber(0))
-neq = Infix(' != ', lambda x, y, *args, **kwargs: RealNumber(1) if x != y else RealNumber(0))
-logical_and = Infix(' && ', lambda x, y, *args, **kwargs: x if x.sign == 0 else y)
-logical_or = Infix(' || ', lambda x, y, *args, **kwargs: x if x.sign != 0 else y)
-function_invocation = Infix('<invoke>', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
-function_composition = Infix('', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
-sin = Prefix('sin', sin_fn)
-cos = Prefix('cos', cos_fn)
-tan = Prefix('tan', tan_fn)
-sec = Prefix('sec', sec_fn)
-csc = Prefix('csc', csc_fn)
-cot = Prefix('cot', cot_fn)
-sinh = Prefix('sinh', sinh_fn)
-cosh = Prefix('cosh', cosh_fn)
-tanh = Prefix('tanh', tanh_fn)
-arcsin = Prefix('asin', arcsin_fn)
-arccos = Prefix('acos', arccos_fn)
-arctan = Prefix('atan', arctan_fn)
-ln = Prefix('ln', ln_fn)
-lg = Prefix('lg', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
-weak_sin = Prefix('sin ', sin_fn)
-weak_cos = Prefix('cos ', cos_fn)
-weak_tan = Prefix('tan ', tan_fn)
-weak_sec = Prefix('sec ', sec_fn)
-weak_csc = Prefix('csc ', csc_fn)
-weak_cot = Prefix('cot ', cot_fn)
-weak_sinh = Prefix('sinh ', sinh_fn)
-weak_cosh = Prefix('cosh ', cosh_fn)
-weak_tanh = Prefix('tanh ', tanh_fn)
-weak_arcsin = Prefix('asin ', arcsin_fn)
-weak_arccos = Prefix('acos ', arccos_fn)
-weak_arctan = Prefix('atan ', arctan_fn)
-weak_ln = Prefix('ln ', ln_fn)
-weak_lg = Prefix('lg ', lambda x, *args, epsilon=None, **kwargs: ln_fn(x, epsilon=epsilon, **kwargs) / ln10)
-weak_sqrt = Prefix('sqrt ', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, RealNumber(1, 2, fcf=False), epsilon=epsilon))
-sqrt = Prefix('sqrt', lambda x, *args, epsilon=None, **kwargs: exponentiation_fn(x, RealNumber(1, 2, fcf=False), epsilon=epsilon))
-exponentiation = Infix('^', exponentiation_fn)
-factorial = Postfix('!', factorial_fn)
+lt = Infix(' < ', lambda x, y, *args, **kwargs: one if x < y else zero)
+ltEq = Infix(' <= ', lambda x, y, *args, **kwargs: one if x <= y else zero)
+gt = Infix(' > ', lambda x, y, *args, **kwargs: one if x > y else zero)
+gtEq = Infix(' >= ', lambda x, y, *args, **kwargs: one if x >= y else zero)
+eq = Infix(' == ', lambda x, y, *args, **kwargs: one if x == y else zero)
+neq = Infix(' != ', lambda x, y, *args, **kwargs: one if x != y else zero)
+logicalAND = Infix(' && ', lambda x, y, *args, **kwargs: x if x.sign == 0 else y)
+logicalOR = Infix(' || ', lambda x, y, *args, **kwargs: x if x.sign != 0 else y)
+functionInvocation = Infix('<invoke>', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
+functionComposition = Infix('', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
+sin = Prefix('sin', sinFn)
+cos = Prefix('cos', cosFn)
+tan = Prefix('tan', tanFn)
+sec = Prefix('sec', secFn)
+csc = Prefix('csc', cscFn)
+cot = Prefix('cot', cotFn)
+sinh = Prefix('sinh', sinhFn)
+cosh = Prefix('cosh', coshFn)
+tanh = Prefix('tanh', tanhFn)
+arcsin = Prefix('asin', arcsinFn)
+arccos = Prefix('acos', arccosFn)
+arctan = Prefix('atan', arctanFn)
+ln = Prefix('ln', lnFn)
+lg = Prefix('lg', lambda x, *args, **kwargs: lnFn(x, **kwargs) / ln10)
+weakSin = Prefix('sin ', sinFn)
+weakCos = Prefix('cos ', cosFn)
+weakTan = Prefix('tan ', tanFn)
+weakSec = Prefix('sec ', secFn)
+weakCsc = Prefix('csc ', cscFn)
+weakCot = Prefix('cot ', cotFn)
+weakSinh = Prefix('sinh ', sinhFn)
+weakCosh = Prefix('cosh ', coshFn)
+weakTanh = Prefix('tanh ', tanhFn)
+weakArcsin = Prefix('asin ', arcsinFn)
+weakArccos = Prefix('acos ', arccosFn)
+weakArctan = Prefix('atan ', arctanFn)
+weakLn = Prefix('ln ', lnFn)
+weakLg = Prefix('lg ', lambda x, *args, **kwargs: lnFn(x, **kwargs) / ln10)
+weakSqrt = Prefix('sqrt ', lambda x, *args, **kwargs: exponentiationFn(x, half))
+sqrt = Prefix('sqrt', lambda x, *args, **kwargs: exponentiationFn(x, half))
+exponentiation = Infix('^', exponentiationFn)
+factorial = Postfix('!', factorialFn)
 
-regex = {r'(?<!\s)(\/)(?!\s)': frac_div,
-         r'\s+(\/)\s+': division,
-         r'\s*(\*)\s*': multiplication,
-         r'\s*(%)\s*': modulo,
-         r'(!)': factorial,
-         r'\s*(\^)\s*': exponentiation,
-         r'\s*(\+)\s+': addition,
-         r'\s*(\-)\s+': subtraction,
-         r'\s*(>=)\s*': gt_eq,
-         r'\s*(<=)\s*': lt_eq,
-         r'\s*(==)\s*': eq,
-         r'\s*(!=)\s*': neq,
-         r'\s*(>)\s*': gt,
-         r'\s*(<)\s*': lt,
-         r'\s*(\+)': ambiguous_plus,
-         r'\s*(\-)': ambiguous_minus,
-         r'\s*(&&)\s*': logical_and,
-         r'\s*(\|\|)\s*': logical_or,
-         r'\s*(=)\s*': assignment,
-         r'(sinh)\s+': weak_sinh,
-         r'(cosh)\s+': weak_cosh,
-         r'(tanh)\s+': weak_tanh,
-         r'(sinh)(?![A-Za-z_])': sinh,
-         r'(cosh)(?![A-Za-z_])': cosh,
-         r'(tanh)(?![A-Za-z_])': tanh,
-         r'(sin)\s+': weak_sin,
-         r'(cos)\s+': weak_cos,
-         r'(tan)\s+': weak_tan,
-         r'(sec)\s+': weak_sec,
-         r'(csc|cosec)\s+': weak_csc,
-         r'(cot)\s+': weak_cot,
-         r'(arcsin|asin)\s+': weak_arcsin,
-         r'(arccos|acos)\s+': weak_arccos,
-         r'(arctan|atan)\s+': weak_arctan,
-         r'(sqrt)\s+': weak_sqrt,
-         r'(ln)\s+': weak_ln,
-         r'(lg)\s+': weak_lg,
-         r'(sin)(?![A-Za-z_])': sin,
-         r'(cos)(?![A-Za-z_])': cos,
-         r'(tan)(?![A-Za-z_])': tan,
-         r'(sec)(?![A-Za-z_])': sec,
-         r'(csc|cosec)(?![A-Za-z_])': csc,
-         r'(cot)(?![A-Za-z_])': cot,
-         r'(arcsin|asin)(?![A-Za-z_])': arcsin,
-         r'(arccos|acos)(?![A-Za-z_])': arccos,
-         r'(arctan|atan)(?![A-Za-z_])': arctan,
-         r'(sqrt)(?![A-Za-z_])': sqrt,
-         r'(ln)(?![A-Za-z_])': ln,
-         r'(lg)(?![A-Za-z_])': lg,
-         r'(\s)\s*': space_separator,
-         r'\s*(;)\s*': semicolon_separator,
-         r'(P)': permutation,
-         r'(C)': combination,
+regex = {
+    r'(?<!\s)(\/)(?!\s)': fracDiv,
+    r'\s+(\/)\s+': division,
+    r'\s*(\*)\s*': multiplication,
+    r'\s*(%)\s*': modulo,
+    r'(!)': factorial,
+    r'\s*(\^)\s*': exponentiation,
+    r'\s*(\+)\s+': addition,
+    r'\s*(\-)\s+': subtraction,
+    r'\s*(>=)\s*': gtEq,
+    r'\s*(<=)\s*': ltEq,
+    r'\s*(==)\s*': eq,
+    r'\s*(!=)\s*': neq,
+    r'\s*(>)\s*': gt,
+    r'\s*(<)\s*': lt,
+    r'\s*(\+)': ambiguousPlus,
+    r'\s*(\-)': ambiguousMinus,
+    r'\s*(&&)\s*': logicalAND,
+    r'\s*(\|\|)\s*': logicalOR,
+    r'\s*(=)\s*': assignment,
+    r'(sinh)\s+': weakSinh,
+    r'(cosh)\s+': weakCosh,
+    r'(tanh)\s+': weakTanh,
+    r'(sinh)(?![A-Za-z_])': sinh,
+    r'(cosh)(?![A-Za-z_])': cosh,
+    r'(tanh)(?![A-Za-z_])': tanh,
+    r'(sin)\s+': weakSin,
+    r'(cos)\s+': weakCos,
+    r'(tan)\s+': weakTan,
+    r'(sec)\s+': weakSec,
+    r'(csc|cosec)\s+': weakCsc,
+    r'(cot)\s+': weakCot,
+    r'(arcsin|asin)\s+': weakArcsin,
+    r'(arccos|acos)\s+': weakArccos,
+    r'(arctan|atan)\s+': weakArctan,
+    r'(sqrt)\s+': weakSqrt,
+    r'(ln)\s+': weakLn,
+    r'(lg)\s+': weakLg,
+    r'(sin)(?![A-Za-z_])': sin,
+    r'(cos)(?![A-Za-z_])': cos,
+    r'(tan)(?![A-Za-z_])': tan,
+    r'(sec)(?![A-Za-z_])': sec,
+    r'(csc|cosec)(?![A-Za-z_])': csc,
+    r'(cot)(?![A-Za-z_])': cot,
+    r'(arcsin|asin)(?![A-Za-z_])': arcsin,
+    r'(arccos|acos)(?![A-Za-z_])': arccos,
+    r'(arctan|atan)(?![A-Za-z_])': arctan,
+    r'(sqrt)(?![A-Za-z_])': sqrt,
+    r'(ln)(?![A-Za-z_])': ln,
+    r'(lg)(?![A-Za-z_])': lg,
+    r'(\s)\s*': spaceSeparator,
+    r'\s*(;)\s*': semicolonSeparator,
+    r'(P)': permutation,
+    r'(C)': combination,
 }
 
-"""
-order = (((space_separator, multiplication, division, modulo), 1),
-         ((addition, subtraction), 1),
-         ((lt_eq, lt, gt, gt_eq), 1),
-         ((eq, neq), 1),
-         ((logical_and, ), 1),
-         ((logical_or, ), 1),
-         ((assignment, ), -1),
-)
-"""
-
 power = {
-         function_invocation: (10.1, 99),
-         factorial: (12, 12.1),
-         implicit_mult: (11, 11),
-         exponentiation: (11.1, 10.9),
-         sqrt: (11.1, 10.9),
-         sin: (11.1, 10.9),
-         cos: (11.1, 10.9),
-         tan: (11.1, 10.9),
-         sec: (11.1, 10.9),
-         csc: (11.1, 10.9),
-         cot: (11.1, 10.9),
-         sinh: (11.1, 10.9),
-         cosh: (11.1, 10.9),
-         tanh: (11.1, 10.9),
-         arcsin: (11.1, 10.9),
-         arccos: (11.1, 10.9),
-         arctan: (11.1, 10.9),
-         ln: (11.1, 10.9),
-         lg: (11.1, 10.9),
-         negative: (11.1, 10.9),
-         positive: (11.1, 10.9),
-         implicit_mult_prefix: (10, 10),
-         frac_div: (9.5, 9.5),
-         weak_sqrt: (11.1, 8.9),
-         weak_sin: (11.1, 8.9),
-         weak_cos: (11.1, 8.9),
-         weak_tan: (11.1, 8.9),
-         weak_sec: (11.1, 8.9),
-         weak_csc: (11.1, 8.9),
-         weak_cot: (11.1, 8.9),
-         weak_sinh: (11.1, 8.9),
-         weak_cosh: (11.1, 8.9),
-         weak_tanh: (11.1, 8.9),
-         weak_arcsin: (11.1, 8.9),
-         weak_arccos: (11.1, 8.9),
-         weak_arctan: (11.1, 8.9),
-         weak_ln: (11.1, 8.9),
-         weak_lg: (11.1, 8.9),
-         permutation: (9, 9),
-         combination: (9, 9),
-         division: (8, 8),
-         multiplication: (8, 8),
-         modulo: (8, 8),
-         space_separator: (8, 8),
-         subtraction: (7, 7),
-         addition: (7, 7),
-         gt_eq: (6, 6),
-         gt: (6, 6),
-         lt_eq: (6, 6),
-         lt: (6, 6),
-         eq: (5, 5),
-         neq: (5, 5),
-         logical_and: (4, 4),
-         logical_or: (3, 3),
-         assignment: (2, 1.9),
-         semicolon_separator: (1, 1.1),
-         # comma_separator: (1, 1),
-         None: (0, 0),
+    functionInvocation: (10.1, 99),
+    factorial: (12, 12.1),
+    implicitMult: (11, 11),
+    exponentiation: (11.1, 10.9),
+    sqrt: (11.1, 10.9),
+    sin: (11.1, 10.9),
+    cos: (11.1, 10.9),
+    tan: (11.1, 10.9),
+    sec: (11.1, 10.9),
+    csc: (11.1, 10.9),
+    cot: (11.1, 10.9),
+    sinh: (11.1, 10.9),
+    cosh: (11.1, 10.9),
+    tanh: (11.1, 10.9),
+    arcsin: (11.1, 10.9),
+    arccos: (11.1, 10.9),
+    arctan: (11.1, 10.9),
+    ln: (11.1, 10.9),
+    lg: (11.1, 10.9),
+    negative: (11.1, 10.9),
+    positive: (11.1, 10.9),
+    implicitMultPrefix: (10, 10),
+    fracDiv: (9.5, 9.5),
+    weakSqrt: (11.1, 8.9),
+    weakSin: (11.1, 8.9),
+    weakCos: (11.1, 8.9),
+    weakTan: (11.1, 8.9),
+    weakSec: (11.1, 8.9),
+    weakCsc: (11.1, 8.9),
+    weakCot: (11.1, 8.9),
+    weakSinh: (11.1, 8.9),
+    weakCosh: (11.1, 8.9),
+    weakTanh: (11.1, 8.9),
+    weakArcsin: (11.1, 8.9),
+    weakArccos: (11.1, 8.9),
+    weakArctan: (11.1, 8.9),
+    weakLn: (11.1, 8.9),
+    weakLg: (11.1, 8.9),
+    permutation: (9, 9),
+    combination: (9, 9),
+    division: (8, 8),
+    multiplication: (8, 8),
+    modulo: (8, 8),
+    spaceSeparator: (8, 8),
+    subtraction: (7, 7),
+    addition: (7, 7),
+    gtEq: (6, 6),
+    gt: (6, 6),
+    ltEq: (6, 6),
+    lt: (6, 6),
+    eq: (5, 5),
+    neq: (5, 5),
+    logicalAND: (4, 4),
+    logicalOR: (3, 3),
+    assignment: (2, 1.9),
+    semicolonSeparator: (1, 1.1),
+    # comma_separator: (1, 1),
+    None: (0, 0),
 }
 
 # a + (b=3) + 4^b(c=b+1)a!sinb + 7c
