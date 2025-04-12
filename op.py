@@ -1,4 +1,4 @@
-from operators import Operator, Infix, Prefix, Postfix
+from operators import *
 from functions import Function
 from errors import *
 from vars import LValue
@@ -29,13 +29,11 @@ def exponentiationFn(a, b, *args, fcf=False, **kwargs):
     if isinstance(a, Function):
         if b.isInt(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
-    # print(f'Exponentiation: {str(a)} ^ {str(b)}')
     if a == zero:
         if b == zero: raise CalculatorError(f'0^0 is undefined')
         return zero
-    if b.sign == -1: return one / exponentiationFn(a, -b, *args, fcf=fcf, **kwargs)
+    if isinstance(b, RealNumber) and b.sign == -1: return one / exponentiationFn(a, -b, *args, fcf=fcf, **kwargs)
     if b.isInt(): return intPower(a, int(b), fcf=fcf)
-    if a.sign == -1: raise CalculatorError(f'Cannot raise a negative number {str(a)} to a fractional power {str(b)}')
     # a^b = e^(b ln a)
     return exp(b * lnFn(a))
 
@@ -50,6 +48,9 @@ def intPower(base, power, *args, fcf=False, **kwargs):
     return (one / result if power < 0 else result).fastContinuedFraction()
 
 def exp(x, *args, fcf=False, **kwargs):
+    if isinstance(x, ComplexNumber):  # e^(a + ib) = (e^a) e^(ib) = (e^a) cis b
+        r = exp(x.real)
+        return ComplexNumber(r * cosFn(x.im), r * sinFn(x.im))
     intPart = intPower(e, int(x))
     x = x.fracPart()
     sum = term = i = one
@@ -59,34 +60,37 @@ def exp(x, *args, fcf=False, **kwargs):
         i += one
     return intPart * sum.fastContinuedFraction()
 
-# How to compute ln A?
-# ====================
-# y = e^x - A
-# Given a guess x0, we have (x0, e^x0 - A). Gradient is e^x0.
-# Eqn is y - e^x0 + A = e^x0 (x - x0)
-# At y = 0, - e^x0 + A = e^x0 (x - x0)
-# -1 + A/e^x0 = x - x0
-# x = x0 - 1 + A/e^x0 <- Newton's Method
-# https://qr.ae/pYekgm
-
 def lnFn(x, **kwargs):
-    if x <= zero: raise CalculatorError(f'ln can only apply to a positive number.')
+    if x == zero: raise CalculatorError(f'ln 0 is undefined.')
+    # ln(re^iθ) = ln r + iθ
+    if isinstance(x, ComplexNumber): return ComplexNumber(lnFn(abs(x)), x.arg())
     if x < one: return -lnFn(one / x, **kwargs)
-    ln2s = ln10s = zero
+    result = zero
     while x > ten:
         x /= ten
-        ln10s += one
+        result += ln10
     while x > two:
         x /= two
-        ln2s += one
-    x0 = zero
-    dx = st.epsilon * two
+        result += ln2
+    while True:
+        x /= onePointOne
+        result += ln1_1
+        if x < one: break
+    # ln (1 + x) = x - x^2/2 + x^3/3 - x^4/4 + x^5/5 - ...
+    # ln (1 - x) = -x - x^2/2 - x^3/3 - x^4/4 - x^5/5 - ...
+    xPow = dx = x = one - x
+    denom = one
     while abs(dx) > st.epsilon:
-        dx = x / exp(x0) - one
-        x0 = (x0 + dx).fastContinuedFraction()
-    return (ln10 * ln10s + ln2 * ln2s + x0).fastContinuedFraction()
+        result -= dx
+        xPow *= x
+        denom += one
+        dx = xPow / denom 
+    return result.fastContinuedFraction()
 
 def sinFn(x, **kwargs):
+    if isinstance(x, ComplexNumber):
+        eiz = exp(imag_i * x)
+        return (eiz - (one / eiz)) / two / imag_i
     if x < zero: return -sinFn(-x, **kwargs)
     x = x % (pi * two)
     if x > pi * three / two: return -sinFn(pi * two - x, **kwargs)
@@ -127,7 +131,6 @@ def coshFn(x, **kwargs):
 def tanhFn(x, **kwargs):
     return ((e2x := exp(two * x)) - one) / (e2x + one)
 
-
 def arcsinFn(x, **kwargs):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
     if x.sign == -1: return -arcsinFn(-x, **kwargs)
@@ -165,6 +168,10 @@ def arctanFn(x, **kwargs):
         sum = sum.fastContinuedFraction()
         num += two
     return sum
+
+def absFn(x, **kwargs): return abs(x)
+def conjFn(x, **kwargs): return x.conj()
+def argFn(x, **kwargs): return x.arg()
 
 def assignmentFn(L, R, mem=None, **kwargs):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
@@ -232,6 +239,9 @@ weakLn = Prefix('ln ', lnFn)
 weakLg = Prefix('lg ', lambda x, *args, **kwargs: lnFn(x, **kwargs) / ln10)
 weakSqrt = Prefix('sqrt ', lambda x, *args, **kwargs: exponentiationFn(x, half))
 sqrt = Prefix('sqrt', lambda x, *args, **kwargs: exponentiationFn(x, half))
+absolute = PrefixFunction('abs', absFn)
+argument = PrefixFunction('arg', argFn)
+conjugate = PrefixFunction('conj', conjFn)
 exponentiation = Infix('^', exponentiationFn)
 factorial = Postfix('!', factorialFn)
 
@@ -273,6 +283,9 @@ regex = {
     r'(sqrt)\s+': weakSqrt,
     r'(ln)\s+': weakLn,
     r'(lg)\s+': weakLg,
+    r'(abs)(?![A-Za-z_])': absolute,
+    r'(arg)(?![A-Za-z_])': argument,
+    r'(conj)(?![A-Za-z_])': conjugate,
     r'(sin)(?![A-Za-z_])': sin,
     r'(cos)(?![A-Za-z_])': cos,
     r'(tan)(?![A-Za-z_])': tan,
@@ -303,6 +316,9 @@ power = {
     sec: (11.1, 10.9),
     csc: (11.1, 10.9),
     cot: (11.1, 10.9),
+    absolute: (11.1, 10.9),
+    argument: (11.1, 10.9),
+    conjugate: (11.1, 10.9),
     sinh: (11.1, 10.9),
     cosh: (11.1, 10.9),
     tanh: (11.1, 10.9),

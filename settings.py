@@ -16,7 +16,7 @@ class Settings:
         with open(filename) as f: self._settings = json.loads(f.readline())
         self._filename = filename
         self.epsilon = RealNumber(1, 10 ** self._settings['working_precision'], fcf=False)
-        self.finalEpsilon = RealNumber(1, 10 ** self._settings['final_precision'], fcf=False)
+        self.finalEpsilon = RealNumber(1, 10 * 10 ** self._settings['final_precision'], fcf=False)
         self._version = 0
 
     def set(self, key, value):
@@ -26,7 +26,7 @@ class Settings:
         if key == 'working_precision':
             self.epsilon = RealNumber(1, 10 ** value, fcf=False)
         elif key == 'final_precision':
-            self.finalEpsilon = RealNumber(1, 10 ** value, fcf=False)
+            self.finalEpsilon = RealNumber(1, 10 * 10 ** value, fcf=False)
         
         with open(self._filename, "w") as f:
             f.write(json.dumps(self._settings))

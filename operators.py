@@ -15,6 +15,10 @@ class Prefix(Operator):
     def __init__(self, name='<un_op_l>', function=lambda x: 'undefined un_op_left'):
         super().__init__(name, function)
 
+class PrefixFunction(Prefix):
+    def __init__(self, name='<un_op_l_parens>', function=lambda x: 'undefined un_op_left requiring parens'):
+        super().__init__(name, function)
+
 class Postfix(Operator):
     def __init__(self, name='<un_op_r>', function=lambda x: 'undefined un_op_right'):
         super().__init__(name, function)

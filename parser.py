@@ -1,6 +1,6 @@
 from expressions import Expression, Tuple
 from number import RealNumber
-from operators import Infix, Prefix, Postfix
+from operators import *
 from vars import LValue, WordToken, Value
 import op
 from errors import ParseError
@@ -74,7 +74,7 @@ def parse(s, startPos=0, brackets='', parent=None):
             # if tokens[-1] is not None and tokens[-1] is not Op.assignment: raise ParseError(f'Cannot assign to invalid l-value (pos {startPos + pos}). Did you mean "==" instead?')
             addToken(WordToken(m.group()), m)
         else:
-            raise ParseError(f'Unrecognized symbol "{ss[0]}"', (startPos + pos, startPos + pos + 1))
+            raise ParseError(f"Unrecognized symbol '{ss[0]}'", (startPos + pos, startPos + pos + 1))
 
     validate(expr)
     return expr
@@ -90,10 +90,15 @@ def validate(expr):
     while i < len(lst) - 1:
         # Transform / remove some types of tokens
         match lst[i-1:i+2]:
+            case [_any_, PrefixFunction(), None]: raise ParseError(f"Missing inputs for function '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [_any_, PrefixFunction(), _notExpression_] if not isinstance(_notExpression_, Expression):
+                if _notExpression_ is None: raise ParseError(f"'{str(lst[i])}' must be followed by bracketed expression.", expr.posOfElem(i))
+                else: raise ParseError(f"'{str(lst[i])}' must be followed by bracketed expression.", expr.posOfElem(i))
             # Bin cannot follow Bin / UL / None
-            case [Infix() | Prefix() | None, Infix(), _any_]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [Infix() | Prefix() | None, Infix(), _any_]: raise ParseError(f"Unexpected infix operator '{str(lst[i])}'", expr.posOfElem(i-1))
             # Bin cannot precede Bin / UR / None
-            case [_any_, Infix(), Infix() | Postfix() | None]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [_any_, Infix(), Infix() | Postfix()]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i))
+            case [_any_, Infix(), None]: raise ParseError(f"Missing operand for '{str(lst[i])}'", expr.posOfElem(i-1))
             # L to R: Convert +/- to positive/negative if they come after Bin / UL
             case [None | Infix() | Prefix(), op.ambiguousPlus | op.ambiguousMinus, _any_]:
                 lst[i] = op.positive if lst[i] == op.ambiguousPlus else op.negative
@@ -103,12 +108,13 @@ def validate(expr):
                 lst[i] = op.addition if lst[i] == op.ambiguousPlus else op.subtraction
                 i -= 2
             # Numbers cannot follow space separators or evaluables
-            case [_any_, Value() | op.spaceSeparator, RealNumber()]: raise ParseError(f'Number {str(lst[i+1])} cannot follow space separator or an evaluable expression', expr.posOfElem(i))
+            case [_any_, Value() | op.spaceSeparator, RealNumber()]: raise ParseError(f"Number '{str(lst[i+1])}' cannot follow space separator or an evaluable expression", expr.posOfElem(i))
             # UR has to follow an evaluable or other UR
-            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Invalid operand for {str(lst[i])}", expr.posOfElem(i-1))
+            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Unexpected postfix operator '{str(lst[i])}'", expr.posOfElem(i-1))
             # UL cannot precede Bin, UR or None
-            case [_any_, Prefix(), Infix() | Postfix() | None]: raise ParseError(f"Invalid operand for {str(lst[i])}", expr.posOfElem(i-1))
-            case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment ", expr.posOfElem(i))
+            case [_any_, Prefix(), Infix() | Postfix()]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i))
+            case [_any_, Prefix(), None]: raise ParseError(f"Missing operand for '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment", expr.posOfElem(i))
             case _: pass
         i += 1
     expr.tokens, expr.tokenPos = lst[1:-1], posList[1:-1]

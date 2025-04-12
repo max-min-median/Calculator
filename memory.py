@@ -8,32 +8,37 @@ class Memory:
     # Parser requires access to memory
     # Expressions requires access to memory
 
-    baseList = {'e': e,
-                 'pi': pi,
-                 'i': imag_i,
-                 'P': op.permutation,   # These are here so that
-                 'C': op.combination,   # they are overrideable.
+    baseList = {
+        'e': e,
+        'pi': pi,
+        'i': imag_i,
+        'P': op.permutation,   # These are here so that
+        'C': op.combination,   # they are overrideable.
     }
 
-    topList = {'sin': op.sin,   # These override user vars
-                'cosec': op.csc,
-                'csc': op.csc,
-                'cos': op.cos,
-                'sec': op.sec,
-                'tan': op.tan,
-                'cot': op.cot,
-                'sinh': op.sinh,
-                'cosh': op.cosh,
-                'tanh': op.tanh,
-                'asin': op.arcsin,
-                'arcsin': op.arcsin,
-                'acos': op.arccos,
-                'arccos': op.arccos,
-                'atan': op.arctan,
-                'arctan': op.arctan,
-                'sqrt': op.sqrt,
-                'ln': op.ln,
-                'lg': op.lg,
+    topList = {
+        'abs': op.absolute,   # These override user vars
+        'arg': op.argument,
+        'conj': op.conjugate,
+        'sin': op.sin,
+        'cosec': op.csc,
+        'csc': op.csc,
+        'cos': op.cos,
+        'sec': op.sec,
+        'tan': op.tan,
+        'cot': op.cot,
+        'sinh': op.sinh,
+        'cosh': op.cosh,
+        'tanh': op.tanh,
+        'asin': op.arcsin,
+        'arcsin': op.arcsin,
+        'acos': op.arccos,
+        'arccos': op.arccos,
+        'atan': op.arctan,
+        'arctan': op.arctan,
+        'sqrt': op.sqrt,
+        'ln': op.ln,
+        'lg': op.lg,
     }
 
     def __init__(self, filename=None):

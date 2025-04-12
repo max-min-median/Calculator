@@ -127,9 +127,9 @@ class Tuple(Expression):
         tup.tokens = [expr]
         return tup
 
-    def disp(self):
+    def disp(self, fracMaxLength, decimalPlaces):
         tempTokens = [token.fastContinuedFraction(epsilon=st.finalEpsilon) if hasattr(token, 'fastContinuedFraction') else token for token in self.tokens]
-        self.displayStr = self.brackets[:1] + ', '.join([x.disp() for x in tempTokens]) + self.brackets[1:]
+        self.displayStr = self.brackets[:1] + ', '.join([x.disp(fracMaxLength, decimalPlaces) for x in tempTokens]) + self.brackets[1:]
         return self.displayStr
 
     def __str__(self):

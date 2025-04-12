@@ -50,7 +50,6 @@ class RealNumber(Value):
                 newFrac = self.fastContinuedFraction(epsilon=epsilon, maxDenom=maxDenom)
                 self.numerator = newFrac.numerator
                 self.denominator = newFrac.denominator
-
     
     def isInt(self):
         return self.denominator == 1
@@ -90,7 +89,6 @@ class RealNumber(Value):
         self.denominator = self.denominator // div
         return self
 
-
     def fastContinuedFraction(self, epsilon=None, maxDenom='inf'):
         if self.sign == -1: return -(-self).fastContinuedFraction(epsilon=epsilon, maxDenom=maxDenom)
         if epsilon is None: epsilon = st.epsilon
@@ -107,6 +105,14 @@ class RealNumber(Value):
             prev = lower
             lower, upper = upper, lower
             gamma = one / (gamma - s)
+
+    def __abs__(self): return self if self.sign >= 0 else -self
+
+    def arg(self):
+        if self.sign == 0: raise CalculatorError('arg(0) is undefined.')
+        return zero if self.sign == 1 else pi
+
+    def conj(self): return self
 
     def __add__(self, other):
         # if isinstance(other, (int, float)): other = RealNumber(other)
@@ -154,8 +160,6 @@ class RealNumber(Value):
     def __ge__(self, other): return not self < other
     def __le__(self, other): return not self > other
 
-    def __abs__(self): return self if self.sign >= 0 else -self
-
     def fracPart(self): return RealNumber(self.numerator % self.denominator * self.sign, self.denominator, fcf=False)
 
     def value(self, *args, **kwargs): return self
@@ -171,17 +175,18 @@ class RealNumber(Value):
         if len(s) <= fracMaxLength: return s + ' = ' + self.dec(dp=decimalPlaces)
         return self.dec(dp=decimalPlaces)
 
-negfive = RealNumber(-5, 1, fcf=False)
-five = -negfive
+
 # 'Interning' some useful constants
 zero = RealNumber(0)
 one = RealNumber(1)
+onePointOne = RealNumber(11, 10, fcf=False)
 two = RealNumber(2)
 three = RealNumber(3)
 four = RealNumber(4)
 ten = RealNumber(10)
 e = RealNumber('2.718281828459045235360287471353', fcf=False)
 pi = RealNumber('3.1415926535897932384626433832795', fcf=False)
+ln1_1 = RealNumber(167314056934657, 1755468904561492, fcf=False)
 ln2 = RealNumber(1554903831458736, 2243252046704767, fcf=False)
 ln10 = RealNumber(227480160645689, 98793378510888, fcf=False)
 half = one / two
@@ -211,6 +216,21 @@ class ComplexNumber(Value):  # Must be non-real valued, i.e. must have an imagin
     def fastContinuedFraction(self, epsilon=None, maxDenom='inf'):
         if epsilon is None: epsilon = st.epsilon
         return ComplexNumber(self.real.fastContinuedFraction(epsilon=epsilon, maxDenom=maxDenom), self.im.fastContinuedFraction(epsilon=epsilon, maxDenom=maxDenom))
+
+    def isInt(self): return False
+
+    def __abs__(self):
+        from op import exponentiationFn
+        return exponentiationFn(self.real * self.real + self.im * self.im, half, fcf=True)
+
+    def arg(self):
+        if self.real == zero: return pi / two if self.im > zero else -pi / two
+        from op import arctanFn
+        argument = arctanFn(self.im / self.real)
+        if self.real < 0: argument += pi if self.im > zero else -pi
+        # 2nd quad get -theta but supposed to be pi - theta
+        # 3rd quad get theta but supposed to be -pi + theta
+        return argument
 
     def conj(self): return ComplexNumber(self.real, -self.im)
     
@@ -246,10 +266,6 @@ class ComplexNumber(Value):  # Must be non-real valued, i.e. must have an imagin
         if isinstance(other, RealNumber): return self.reciprocal() * other
         return NotImplemented
 
-    def abs(self, epsilon=None):
-        from op import exponentiationFn
-        return exponentiationFn(self.real * self.real + self.denominator * self.denominator, half, epsilon=epsilon, fcf=True)
-
     def __gt__(self, other):
         raise TypeError('Complex value has no total ordering')
 
@@ -268,7 +284,7 @@ class ComplexNumber(Value):  # Must be non-real valued, i.e. must have an imagin
 
     def __str__(self):
         if self.real.sign == 0:
-            return f"{'-' if self.im.sign == -1 else ''}{str(self.im) if abs(self.im) != one else ''}{' ' if self.im.denominator != 1 else ''}i"
+            return f"{'-' if self.im.sign == -1 else ''}{str(abs(self.im)) if abs(self.im) != one else ''}{' ' if self.im.denominator != 1 else ''}i"
         else:
             return f"{str(self.real)}{' + ' if self.im.sign == 1 else ' - '}{str(abs(self.im)) if abs(self.im) != one else ''}{' ' if self.im.denominator != 1 else ''}i"
 
@@ -284,6 +300,7 @@ imag_i = ComplexNumber(zero, one)
 
 # test code
 if __name__ == '__main__':
+    st.epsilon = RealNumber(1, 10 ** 20, fcf=False)
     a = RealNumber(2, 5)
     b = RealNumber(1, 4)
     assert a + b == RealNumber(13, 20)
@@ -292,4 +309,5 @@ if __name__ == '__main__':
     assert a - b == RealNumber(3, 20)
     c = ComplexNumber(RealNumber(5), RealNumber(2))
     d = ComplexNumber(RealNumber(3), RealNumber(-1))
+    c.arg()
     pass
