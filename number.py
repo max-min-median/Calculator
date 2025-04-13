@@ -204,7 +204,7 @@ class ComplexNumber(Value):  # Must be non-real valued, i.e. must have an imagin
     
     def dec(self, dp=25):
         if self.real.sign == 0:
-            return f"{'-' if self.im.sign == -1 else ''}{self.im.dec(dp) if abs(self.im) != one else ''}i"
+            return f"{self.im.dec(dp) if abs(self.im) != one else ''}i"
         else:
             return f"{self.real.dec(dp)}{' + ' if self.im.sign == 1 else ' - '}{abs(self.im).dec(dp) if abs(self.im) != one else ''}i"
 

@@ -3,7 +3,7 @@ from vars import *
 from memory import Memory
 from errors import *
 from parser import parse
-from number import RealNumber
+from number import *
 from pathlib import Path
 import sys, re
 from UI import *
@@ -71,7 +71,7 @@ def main():
                 expr = parse(inp)
                 if expr is None: continue
                 val = expr.value(mainMem)
-                if isinstance(val, RealNumber): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
+                if isinstance(val, (RealNumber, ComplexNumber)): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
                 mainMem.add('ans', val)
                 ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
             if mainMem._varsVersion != currVersion:

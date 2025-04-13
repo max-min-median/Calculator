@@ -109,8 +109,9 @@ class Expression(Value):
         if self.displayStr == '':
             prevToken = None
             for token in self.tokens:
-                if isinstance(prevToken, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.displayStr += '⋅' + str(token)
-                else: self.displayStr += str(token)
+                # if isinstance(prevToken, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.displayStr += '⋅' + str(token)
+                # else: self.displayStr += str(token)
+                self.displayStr += str(token)
                 prevToken = token
             self.displayStr = self.brackets[:1] + self.displayStr + self.brackets[1:]
         return self.displayStr
