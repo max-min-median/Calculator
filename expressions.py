@@ -37,7 +37,7 @@ class Expression(Value):
         def evaluate(power=0, index=0, skipEval=False):  # returns (Value, endIndex)
             def tryOperate(L, *args, **kwargs):
                 try:
-                    ret = skipEval and dummy or token.function(L, *args, **kwargs)
+                    ret = dummy if skipEval else token.function(L, *args, **kwargs)
                     debug and print(f"{str(token).strip(): ^3}:", ', '.join((str(L),) + tuple(str(a) for a in args)))
                     return ret
                 except CalculatorError as e:

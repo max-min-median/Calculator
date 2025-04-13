@@ -26,3 +26,7 @@ class Postfix(Operator):
 class Infix(Operator):
     def __init__(self, name='<bin_op>', function=lambda x, y: 'undefined bin_op'):
         super().__init__(name, function)
+
+class Ternary(Operator):
+    def __init__(self, name='<ternary_op>', function=lambda x, y: 'undefined tern_op'):
+        super().__init__(name, function)
