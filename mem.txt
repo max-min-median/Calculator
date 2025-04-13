@@ -12,9 +12,9 @@ delta = 1/10000000000000000000
 polar(a) = (abs(a), arg(a))
 sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
 simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
-toDeg = 70300770108641676/1226979905083409
+toDeg = 159121869262581/2777200530560
 area(a, b, c) = a * b * sin c / 2
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
-ans = 0
+ans = -108691 - 136762i

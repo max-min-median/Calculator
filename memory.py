@@ -2,6 +2,9 @@ from number import *
 import op
 from settings import Settings
 
+st = Settings()
+
+
 class Memory:
 
     # Functions override main calculator memory with their own variable memory.
@@ -54,6 +57,7 @@ class Memory:
         return self.update[str] if str in self.update else None
     
     def add(self, str, val):
+        if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.epsilon)
         needSort = True if str not in self._vars else False
         self._vars[str] = val
         if self.trie is not None: self.trie.insert(str)
@@ -78,7 +82,7 @@ class Memory:
         with open(filename, "w") as f:
             for var in self.ownList:
                 value = self.ownList[var]
-                if isinstance(value, RealNumber):
+                if isinstance(value, Number):
                     f.write(f"{var} = {str(value)}\n")
                 elif isinstance(value, FuncComposition):
                     f.write(f"{var} = {value.name}\n")

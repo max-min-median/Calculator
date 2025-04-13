@@ -44,7 +44,7 @@ class WordToken:
     
     def splitWordToken(self, mem, nextToken):
         from operators import Prefix
-        from number import RealNumber
+        from number import Number, RealNumber
         from functions import Function
         from errors import ParseError
         # returns a list of possible splits of the string.
@@ -54,7 +54,7 @@ class WordToken:
             lst, varList = [], []
             for i in reversed(range(len(s))):
                 if (thisWord := s[:i+1]) in wordDict:
-                    if isinstance(wordDict[thisWord], RealNumber): thisWord = Var(thisWord)
+                    if isinstance(wordDict[thisWord], Number): thisWord = Var(thisWord)
                     else: thisWord = wordDict[thisWord]
                     if onlyFuncsAllowed and type(thisWord) != Function: continue
                     if i == len(s) - 1 and type(thisWord) == Prefix and not isinstance(nextToken, Value): continue  # allow stuff like 'ksin3.0pi'

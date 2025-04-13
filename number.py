@@ -6,8 +6,10 @@ from math import gcd  # too bad Python is too slow, have to rely on C. This is t
 
 st = Settings()
 
+class Number(Value):
+    pass
 
-class RealNumber(Value):
+class RealNumber(Number):
 
     @staticmethod
     def gcd(a, b):
@@ -192,7 +194,7 @@ ln10 = RealNumber(227480160645689, 98793378510888, fcf=False)
 half = one / two
 
 
-class ComplexNumber(Value):  # Must be non-real valued, i.e. must have an imaginary part.
+class ComplexNumber(Number):  # Must be non-real valued, i.e. must have an imaginary part.
 
     def __new__(cls, real, im=zero):
         if im == zero: return real

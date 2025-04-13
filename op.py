@@ -32,8 +32,14 @@ def exponentiationFn(a, b, *args, fcf=False, **kwargs):
     if a == zero:
         if b == zero: raise CalculatorError(f'0^0 is undefined')
         return zero
-    if isinstance(b, RealNumber) and b.sign == -1: return one / exponentiationFn(a, -b, *args, fcf=fcf, **kwargs)
-    if b.isInt(): return intPower(a, int(b), fcf=fcf)
+    # rewrite... modulo has problem?!
+    if b.isInt() and (isinstance(a, RealNumber) or isinstance(a, ComplexNumber) and a.real.isInt() and a.im.isInt()):
+        return intPower(a, int(b), fcf=fcf)
+    elif isinstance(a, ComplexNumber) and isinstance(b, RealNumber):  # complex ^ real
+        r = exponentiationFn(abs(a), b)
+        theta = (a.arg() / pi).fastContinuedFraction() * b % two * pi
+        return ComplexNumber(r * cosFn(theta), r * sinFn(theta)).fastContinuedFraction()
+    # if isinstance(b, RealNumber) and b.sign == -1: return one / exponentiationFn(a, -b, *args, fcf=fcf, **kwargs)
     # a^b = e^(b ln a)
     return exp(b * lnFn(a))
 
@@ -145,8 +151,7 @@ def arcsinFn(x, **kwargs):
         term *= xsqr * (k * two) * (k * two - one) / four / k / k
         term = term.fastContinuedFraction()
         sum += term / (k * two + one)
-        sum = sum.fastContinuedFraction()
-    return sum
+    return sum.fastContinuedFraction()
 
 def arccosFn(x, **kwargs):
     if x.sign == -1: return pi - arccosFn(-x, **kwargs)
