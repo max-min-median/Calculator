@@ -7,17 +7,17 @@ from settings import Settings
 
 st = Settings()
 
-def factorialFn(n, **kwargs):
+def factorialFn(n):
     if not n.isInt(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
     n = int(n)
     if n in (0, 1): return one
     for i in range(2, n): n *= i
     return RealNumber(n)
 
-def permutationFn(n, r, **kwargs):  # nPr
-    return combinationFn(n, r, perm=True, **kwargs)
+def permutationFn(n, r):  # nPr
+    return combinationFn(n, r, perm=True)
 
-def combinationFn(n, r, perm=False, **kwargs):  # nCr
+def combinationFn(n, r, perm=False):  # nCr
     if not n.isInt() or not r.isInt(): raise CalculatorError(f'Combination function expects integers')
     n, r = int(n), int(r)
     res = 1
@@ -25,16 +25,15 @@ def combinationFn(n, r, perm=False, **kwargs):  # nCr
     for i in range(1, r + 1): res *= n + 1 - i; res //= i ** (not perm)
     return RealNumber(res)
 
-def exponentiationFn(a, b, *args, fcf=False, **kwargs):
+def exponentiationFn(a, b):
     if isinstance(a, Function):
         if b.isInt(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
     if a == zero:
         if b == zero: raise CalculatorError(f'0^0 is undefined')
         return zero
-    # rewrite... modulo has problem?!
     if b.isInt() and (isinstance(a, RealNumber) or isinstance(a, ComplexNumber) and a.real.isInt() and a.im.isInt()):
-        return intPower(a, int(b), fcf=fcf)
+        return intPower(a, int(b))
     elif isinstance(a, ComplexNumber) and isinstance(b, RealNumber):  # complex ^ real
         r = exponentiationFn(abs(a), b)
         theta = (a.arg() / pi).fastContinuedFraction() * b % two * pi
@@ -43,7 +42,7 @@ def exponentiationFn(a, b, *args, fcf=False, **kwargs):
     # a^b = e^(b ln a)
     return exp(b * lnFn(a))
 
-def intPower(base, power, *args, fcf=False, **kwargs):
+def intPower(base, power):
     if not isinstance(power, int): raise CalculatorError(f'intPower() expects integral power, received {power}')
     pow = abs(power)
     result = one
@@ -53,7 +52,7 @@ def intPower(base, power, *args, fcf=False, **kwargs):
         pow >>= 1
     return (one / result if power < 0 else result).fastContinuedFraction()
 
-def exp(x, *args, fcf=False, **kwargs):
+def exp(x):
     if isinstance(x, ComplexNumber):  # e^(a + ib) = (e^a) e^(ib) = (e^a) cis b
         r = exp(x.real)
         return ComplexNumber(r * cosFn(x.im), r * sinFn(x.im))
@@ -66,12 +65,12 @@ def exp(x, *args, fcf=False, **kwargs):
         i += one
     return intPart * sum.fastContinuedFraction()
 
-def lnFn(x, **kwargs):
+def lnFn(x):
     if x == zero: raise CalculatorError(f'ln 0 is undefined.')
     # ln(re^iθ) = ln r + iθ
     if isinstance(x, ComplexNumber): return ComplexNumber(lnFn(abs(x)), x.arg())
     if isinstance(x, RealNumber) and x < zero: return ComplexNumber(lnFn(abs(x)), pi)
-    if x < one: return -lnFn(one / x, **kwargs)
+    if x < one: return -lnFn(one / x)
     result = zero
     while x > ten:
         x /= ten
@@ -94,15 +93,15 @@ def lnFn(x, **kwargs):
         dx = xPow / denom 
     return result.fastContinuedFraction()
 
-def sinFn(x, **kwargs):
+def sinFn(x):
     if isinstance(x, ComplexNumber):
         eiz = exp(imag_i * x)
         return (eiz - (one / eiz)) / two / imag_i
-    if x < zero: return -sinFn(-x, **kwargs)
+    if x < zero: return -sinFn(-x)
     x = x % (pi * two)
-    if x > pi * three / two: return -sinFn(pi * two - x, **kwargs)
-    elif x > pi: return -sinFn(x - pi, **kwargs)
-    elif x > pi / two: return sinFn(pi - x, **kwargs)
+    if x > pi * three / two: return -sinFn(pi * two - x)
+    elif x > pi: return -sinFn(x - pi)
+    elif x > pi / two: return sinFn(pi - x)
     sum = xPow = dx = x
     xSq = -x * x
     mul = fac = one
@@ -114,35 +113,35 @@ def sinFn(x, **kwargs):
         sum += dx
     return sum.fastContinuedFraction()
 
-def cosFn(x, **kwargs):
+def cosFn(x):
     return sinFn(pi / two - x)
 
-def tanFn(x, **kwargs):
+def tanFn(x):
     return sinFn(x) / cosFn(x)
 
-def secFn(x, **kwargs):
+def secFn(x):
     return one / cosFn(x)
 
-def cscFn(x, **kwargs):
+def cscFn(x):
     return one / sinFn(x)
 
-def cotFn(x, **kwargs):
+def cotFn(x):
     return one / tanFn(x)
 
-def sinhFn(x, **kwargs):
+def sinhFn(x):
     return ((ex := exp(x)) - one / ex) / two
 
-def coshFn(x, **kwargs):
+def coshFn(x):
     return ((ex := exp(x)) + one / ex) / two
 
-def tanhFn(x, **kwargs):
+def tanhFn(x):
     return ((e2x := exp(two * x)) - one) / (e2x + one)
 
-def arcsinFn(x, **kwargs):
+def arcsinFn(x):
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
-    if x.sign == -1: return -arcsinFn(-x, **kwargs)
+    if x.sign == -1: return -arcsinFn(-x)
     if x > one: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
-    if x * x > -x * x + one: return pi / two - arcsinFn(exponentiationFn(-x * x + one, half), **kwargs)
+    if x * x > -x * x + one: return pi / two - arcsinFn(exponentiationFn(-x * x + one, half))
     sum = term = x
     xsqr = x * x
     k = zero
@@ -153,14 +152,14 @@ def arcsinFn(x, **kwargs):
         sum += term / (k * two + one)
     return sum.fastContinuedFraction()
 
-def arccosFn(x, **kwargs):
-    if x.sign == -1: return pi - arccosFn(-x, **kwargs)
+def arccosFn(x):
+    if x.sign == -1: return pi - arccosFn(-x)
     if x > one: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
-    return pi / two - arcsinFn(x, **kwargs)
+    return pi / two - arcsinFn(x)
 
-def arctanFn(x, **kwargs):
-    if x.sign == -1: return -arctanFn(-x, **kwargs)
-    if x > one: return pi / two - arctanFn(one / x, **kwargs)
+def arctanFn(x):
+    if x.sign == -1: return -arctanFn(-x)
+    if x > one: return pi / two - arctanFn(one / x)
     # https://en.wikipedia.org/wiki/Arctangent_series
     sum = term = x / (x * x + one)
     factor = term * x
@@ -175,11 +174,11 @@ def arctanFn(x, **kwargs):
         num += two
     return sum
 
-def absFn(x, **kwargs): return abs(x)
-def conjFn(x, **kwargs): return x.conj()
-def argFn(x, **kwargs): return x.arg()
+def absFn(x): return abs(x)
+def conjFn(x): return x.conj()
+def argFn(x): return x.arg()
 
-def assignmentFn(L, R, mem=None, **kwargs):
+def assignmentFn(L, R, mem=None):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
     if isinstance(mem, dict):
@@ -189,32 +188,32 @@ def assignmentFn(L, R, mem=None, **kwargs):
     return R
 
 assignment = Infix(' = ', assignmentFn)
-spaceSeparator = Infix(' ', lambda x, y, *args, **kwargs: x * y)
-semicolonSeparator = Infix('; ', lambda x, y, *args, **kwargs: y)
+spaceSeparator = Infix(' ', lambda x, y: x * y)
+semicolonSeparator = Infix('; ', lambda x, y: y)
 permutation = Infix('P', permutationFn)
 combination = Infix('C', combinationFn)
 ambiguousPlus = Operator('+?')
 ambiguousMinus = Operator('-?')
-addition = Infix(' + ', lambda x, y, *args, **kwargs: x + y)
-subtraction = Infix(' - ', lambda x, y, *args, **kwargs: x - y)
-multiplication = Infix(' * ', lambda x, y, *args, **kwargs: x * y)
-implicitMult = Infix('', lambda x, y, *args, **kwargs: x * y)
-implicitMultPrefix = Infix(' ', lambda x, y, *args, **kwargs: x * y)
-fracDiv = Infix('/', lambda x, y, *args, **kwargs: x / y)
-division = Infix(' / ', lambda x, y, *args, **kwargs: x / y)
-modulo = Infix(' % ', lambda x, y, *args, **kwargs: x % y)
-positive = Prefix('+', lambda x, *args, **kwargs: x)
-negative = Prefix('-', lambda x, *args, **kwargs: -x)
-lt = Infix(' < ', lambda x, y, *args, **kwargs: one if x < y else zero)
-ltEq = Infix(' <= ', lambda x, y, *args, **kwargs: one if x <= y else zero)
-gt = Infix(' > ', lambda x, y, *args, **kwargs: one if x > y else zero)
-gtEq = Infix(' >= ', lambda x, y, *args, **kwargs: one if x >= y else zero)
-eq = Infix(' == ', lambda x, y, *args, **kwargs: one if x == y else zero)
-neq = Infix(' != ', lambda x, y, *args, **kwargs: one if x != y else zero)
-logicalAND = Infix(' && ', lambda x, y, *args, **kwargs: x if x.sign == 0 else y)
-logicalOR = Infix(' || ', lambda x, y, *args, **kwargs: x if x.sign != 0 else y)
-functionInvocation = Infix('<invoke>', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
-functionComposition = Infix('', lambda x, y, *args, **kwargs: x.invoke(y, *args, **kwargs))
+addition = Infix(' + ', lambda x, y: x + y)
+subtraction = Infix(' - ', lambda x, y: x - y)
+multiplication = Infix(' * ', lambda x, y: x * y)
+implicitMult = Infix('', lambda x, y: x * y)
+implicitMultPrefix = Infix(' ', lambda x, y: x * y)
+fracDiv = Infix('/', lambda x, y: x / y)
+division = Infix(' / ', lambda x, y: x / y)
+modulo = Infix(' % ', lambda x, y: x % y)
+positive = Prefix('+', lambda x: x)
+negative = Prefix('-', lambda x: -x)
+lt = Infix(' < ', lambda x, y: one if x < y else zero)
+ltEq = Infix(' <= ', lambda x, y: one if x <= y else zero)
+gt = Infix(' > ', lambda x, y: one if x > y else zero)
+gtEq = Infix(' >= ', lambda x, y: one if x >= y else zero)
+eq = Infix(' == ', lambda x, y: one if x == y else zero)
+neq = Infix(' != ', lambda x, y: one if x != y else zero)
+logicalAND = Infix(' && ', lambda x, y: x if x.sign == 0 else y)
+logicalOR = Infix(' || ', lambda x, y: x if x.sign != 0 else y)
+functionInvocation = Infix('<invoke>', lambda x, y: x.invoke(y))
+functionComposition = Infix('', lambda x, y: x.invoke(y))
 sin = Prefix('sin', sinFn)
 cos = Prefix('cos', cosFn)
 tan = Prefix('tan', tanFn)
@@ -228,7 +227,7 @@ arcsin = Prefix('asin', arcsinFn)
 arccos = Prefix('acos', arccosFn)
 arctan = Prefix('atan', arctanFn)
 ln = Prefix('ln', lnFn)
-lg = Prefix('lg', lambda x, *args, **kwargs: lnFn(x, **kwargs) / ln10)
+lg = Prefix('lg', lambda x: lnFn(x) / ln10)
 weakSin = Prefix('sin ', sinFn)
 weakCos = Prefix('cos ', cosFn)
 weakTan = Prefix('tan ', tanFn)
@@ -242,9 +241,9 @@ weakArcsin = Prefix('asin ', arcsinFn)
 weakArccos = Prefix('acos ', arccosFn)
 weakArctan = Prefix('atan ', arctanFn)
 weakLn = Prefix('ln ', lnFn)
-weakLg = Prefix('lg ', lambda x, *args, **kwargs: lnFn(x, **kwargs) / ln10)
-weakSqrt = Prefix('sqrt ', lambda x, *args, **kwargs: exponentiationFn(x, half))
-sqrt = Prefix('sqrt', lambda x, *args, **kwargs: exponentiationFn(x, half))
+weakLg = Prefix('lg ', lambda x: lnFn(x) / ln10)
+weakSqrt = Prefix('sqrt ', lambda x: exponentiationFn(x, half))
+sqrt = Prefix('sqrt', lambda x: exponentiationFn(x, half))
 absolute = PrefixFunction('abs', absFn)
 argument = PrefixFunction('arg', argFn)
 conjugate = PrefixFunction('conj', conjFn)
