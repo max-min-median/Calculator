@@ -71,10 +71,12 @@ class WordToken:
         splitList, varList = trySplit(self.name)
 
         if len(splitList) == 0: raise ParseError(f"Unable to parse '{self.name}'")
-        tmp = ['∙'.join(s) for s in splitList]
+        # tmp = ['∙'.join(s) for s in splitList]
         if len(splitList) > 1:
             from UI import UI
-            UI().addText("display", ("Warning: ", UI.YELLOW_ON_BLACK), (f"Found {len(splitList)} ways to parse ", ), (self.name, UI.BRIGHT_PURPLE_ON_BLACK), (':', ))
+            UI().addText("display", ("Warning: ", UI.YELLOW_ON_BLACK), (f"Found {len(splitList)} ways to parse ", ), (self.name, UI.BRIGHT_PURPLE_ON_BLACK), ('.', ))
+            tmp = [item for substr in splitList[0] for item in ((substr, UI.BRIGHT_PURPLE_ON_BLACK), ("∙", ))][:-1]
+            UI().addText("display", (" (Using ", ), *tmp, (")", ), startNewLine=False)
             # ': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
         return splitList[0], varList[0]
 

@@ -61,7 +61,7 @@ class Memory:
         if str == 'ans':
             if 'ans' in self._vars: self._vars.pop('ans')
             self._vars['ans'] = val
-        else:        
+        else:
             if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.epsilon)
             needSort = True if str not in self._vars else False
             self._vars[str] = val
@@ -88,7 +88,7 @@ class Memory:
             for var in self.ownList:
                 value = self.ownList[var]
                 if isinstance(value, Number):
-                    f.write(f"{var} = {str(value)}\n")
+                    f.write(f"{var} = {value.fromString if hasattr(value, 'fromString') else str(value)}\n")
                 elif isinstance(value, FuncComposition):
                     f.write(f"{var} = {value.name}\n")
                 elif isinstance(value, Function):

@@ -17,7 +17,6 @@ class RealNumber(Number):
             a, b = b % a, a
         return b
 
-
     def __init__(self, *inp, fcf=True, epsilon=None, maxDenom='inf'):
         if len(inp) == 1: inp = inp[0]
         if isinstance(inp, float): inp = str(inp)
@@ -27,6 +26,7 @@ class RealNumber(Number):
             self.denominator = 1
         elif isinstance(inp, str):
             if m := match(r'^(-)?(\d+)(?:\.(\d*))?$', inp) or match(r'(-)?(\d*)\.(\d+)', inp):  # integer or float
+                self.fromString = m.group(0)
                 sign, integer, newFrac = ['' if x is None else x for x in m.groups()]
                 self.numerator = int(integer + newFrac)
                 self.denominator = 10 ** len(newFrac)
@@ -137,6 +137,13 @@ class RealNumber(Number):
         if other.sign == 0:
             raise ZeroDivisionError('Division by 0 (RealNumber)')
         return RealNumber(self.sign * other.sign * self.numerator * other.denominator, self.denominator * other.numerator, fcf=False)
+
+    def __floordiv__(self, other):
+        if not isinstance(other, RealNumber): raise CalculatorError("Cannot perform integer division on non-reals.")
+        result = self / other
+        result.numerator = result.numerator // result.denominator
+        result.denominator = 1
+        return result
 
     def __mod__(self, other):
         # if isinstance(other, (int, float)): other = RealNumber(other)
@@ -263,6 +270,9 @@ class ComplexNumber(Number):  # Must be non-real valued, i.e. must have an imagi
         if isinstance(other, RealNumber): return ComplexNumber(self.real / other, self.im / other)
         if not isinstance(other, ComplexNumber): return NotImplemented
         return self * other.reciprocal()
+
+    def __floordiv__(self, other):
+        raise CalculatorError("Cannot perform integer division on non-reals.")
 
     def __rtruediv__(self, other):
         if isinstance(other, RealNumber): return self.reciprocal() * other

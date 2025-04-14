@@ -6,6 +6,8 @@ from errors import CalculatorError, ParseError
 from functions import Function
 
 st = Settings()
+dummy = Var('dummy')
+
 
 class Expression(Value):
     def __init__(self, inputStr=None, brackets='', parent=None, parentOffset=0):
@@ -32,13 +34,12 @@ class Expression(Value):
         return (self.offset, self.offset + len(self.inputStr))
 
     def value(self, mem, debug=False):
-        dummy = Var('dummy')
 
         def evaluate(power=0, index=0, skipEval=False):  # returns (Value, endIndex)
             def tryOperate(L, *args, **kwargs):
                 try:
                     ret = dummy if skipEval else token.function(L, *args, **kwargs)
-                    debug and print(f"{str(token).strip(): ^3}:", ', '.join((str(L),) + tuple(str(a) for a in args)))
+                    if debug: print(f"{str(token).strip(): ^3}:", ', '.join((str(L),) + tuple(str(a) for a in args)))
                     return ret
                 except CalculatorError as e:
                     raise (type(e))(e.args[0], self.posOfElem(index))
@@ -71,7 +72,9 @@ class Expression(Value):
                     case Function(), Expression():
                         token = op.functionInvocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
-                        token = op.implicitMultPrefix  # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
+                        # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
+                        # also need to handle stuff like 1/2()
+                        token = op.implicitMultPrefix
                     case Value(), Value() | Expression():
                         token = op.implicitMult
                 match token:
@@ -79,6 +82,16 @@ class Expression(Value):
                     case Prefix():
                         L, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval)
                         L = tryOperate(L)
+                    case Ternary():
+                        if token == op.ternary_else:
+                            raise ParseError("Unexpected operator ' : '", self.posOfElem(index))
+                        from number import zero
+                        ternaryIndex = index
+                        isTrue = L != zero
+                        trueVal, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval or not isTrue)
+                        if self.parsed[index + 1] != op.ternary_else: raise ParseError("Missing else clause ':' for ternary operator", self.posOfElem(ternaryIndex))
+                        falseVal, index = evaluate(power=token.power[1], index=index+2, skipEval=skipEval or isTrue)
+                        L = trueVal if isTrue else falseVal
                     case Postfix():
                         L = tryOperate(L)
                     case Infix():
@@ -106,14 +119,14 @@ class Expression(Value):
         return evaluate()[0]
             
     def __str__(self):
-        from number import RealNumber
+        # from number import RealNumber
         if self.displayStr == '':
-            prevToken = None
+            # prevToken = None
             for token in self.tokens:
                 # if isinstance(prevToken, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.displayStr += '⋅' + str(token)
                 # else: self.displayStr += str(token)
-                self.displayStr += str(token)
-                prevToken = token
+                self.displayStr += token.fromString if hasattr(token, 'fromString') else str(token)
+                # prevToken = token
             self.displayStr = self.brackets[:1] + self.displayStr + self.brackets[1:]
         return self.displayStr
 

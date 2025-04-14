@@ -190,6 +190,8 @@ def assignmentFn(L, R, mem=None):
 assignment = Infix(' = ', assignmentFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
 semicolonSeparator = Infix('; ', lambda x, y: y)
+ternary_if = Ternary(' ? ', lambda cond, trueVal, falseVal: trueVal if cond else falseVal)
+ternary_else = Ternary(' : ')
 permutation = Infix('P', permutationFn)
 combination = Infix('C', combinationFn)
 ambiguousPlus = Operator('+?')
@@ -201,6 +203,7 @@ implicitMult = Infix('', lambda x, y: x * y)
 implicitMultPrefix = Infix(' ', lambda x, y: x * y)
 fracDiv = Infix('/', lambda x, y: x / y)
 division = Infix(' / ', lambda x, y: x / y)
+intDiv = Infix(' // ', lambda x, y: x // y)
 modulo = Infix(' % ', lambda x, y: x % y)
 positive = Prefix('+', lambda x: x)
 negative = Prefix('-', lambda x: -x)
@@ -251,8 +254,9 @@ exponentiation = Infix('^', exponentiationFn)
 factorial = Postfix('!', factorialFn)
 
 regex = {
-    r'(?<!\s)(\/)(?!\s)': fracDiv,
+    r'\s*(\/\/)\s*': intDiv,
     r'\s+(\/)\s+': division,
+    r'(?<!\s)(\/)(?!\s)': fracDiv,
     r'\s*(\*)\s*': multiplication,
     r'\s*(%)\s*': modulo,
     r'(!)': factorial,
@@ -265,6 +269,8 @@ regex = {
     r'\s*(!=)\s*': neq,
     r'\s*(>)\s*': gt,
     r'\s*(<)\s*': lt,
+    r'\s*(\?)\s*': ternary_if,
+    r'\s*(:)\s*': ternary_else,
     r'\s*(\+)': ambiguousPlus,
     r'\s*(\-)': ambiguousMinus,
     r'\s*(&&)\s*': logicalAND,
@@ -310,7 +316,8 @@ regex = {
 }
 
 power = {
-    functionInvocation: (10.1, 99),
+    # functionInvocation: (10.1, 99),  (why did I choose such a low precedence for this)
+    functionInvocation: (13, 99),
     factorial: (12, 12.1),
     implicitMult: (11, 11),
     exponentiation: (11.1, 10.9),
@@ -353,6 +360,7 @@ power = {
     weakLg: (11.1, 8.9),
     permutation: (9, 9),
     combination: (9, 9),
+    intDiv: (8, 8),
     division: (8, 8),
     multiplication: (8, 8),
     modulo: (8, 8),
@@ -368,11 +376,15 @@ power = {
     logicalAND: (4, 4),
     logicalOR: (3, 3),
     assignment: (2, 1.9),
+    ternary_if: (2, 0.5),
+    ternary_else: (0.3, 0),
     semicolonSeparator: (1, 1.1),
     # comma_separator: (1, 1),
     None: (0, 0),
 }
 
+
+# a ? b ? c : d : e
 # a + (b=3) + 4^b(c=b+1)a!sinb + 7c
 # 4  (b=4) yz^ab cos 7 b sin 3 + 8
 # Postfix (UR) 10

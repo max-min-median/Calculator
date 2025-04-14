@@ -7,6 +7,7 @@ from functions import Function
 from operators import Operator
 
 system = platform.system()
+calcSplash = "MaxCalc v2.2.2-beta by max_min_median"
 
 try:
     import keyboard
@@ -145,7 +146,7 @@ class UI:
                 self.stdscr.addstr(self.ht // 2, self.wd // 2 - 6, "Too small :(")
                 self.stdscr.refresh()
             return False
-        self.stdscr.addstr(0, (self.wd - len(s := "MaxCalc v2.2.0-beta by max_min_median")) // 2, s, UI.LIGHTBLUE_ON_BLACK)
+        self.stdscr.addstr(0, (self.wd - len(calcSplash)) // 2, calcSplash, UI.LIGHTBLUE_ON_BLACK)
         self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
         self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
         self.subwins["display"].leaveok(True)

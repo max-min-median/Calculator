@@ -27,6 +27,6 @@ class Infix(Operator):
     def __init__(self, name='<bin_op>', function=lambda x, y: 'undefined bin_op'):
         super().__init__(name, function)
 
-class Ternary(Operator):
+class Ternary(Infix):
     def __init__(self, name='<ternary_op>', function=lambda x, y: 'undefined tern_op'):
         super().__init__(name, function)

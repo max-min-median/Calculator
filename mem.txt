@@ -6,7 +6,7 @@ cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct(a, b, c, d, e, f) = (bf - ec, cd - af, ae - bd)
 dotProduct(a, b, c, d, e, f) = ad + be + cf
-fibHelper(a, b, n) = n <= 1 && b || fibHelper(b, a + b, n - 1)
+fibHelper(a, b, n) = n == 0 ? b : fibHelper(b, a + b, n - 1)
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
@@ -15,7 +15,16 @@ polar(a) = (abs(a), arg(a))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
 simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
+fib(n) = fibHelper(1, 0, n)
+luhn(n) = luhnHelper(n, 1)
+luhnHelper(n, q) = d = n % 10; n ? (q ? d : 2d > 9 ? 2d - 9 : 2d) + luhnHelper(n // 10, 1 - q) : 0
+f(x) = 5
+reverse(n) = n ? (d = reverse(n // 10); n % 10 * 10^ceil(lg(d + 1)) + d) : 0
+ceil(n) = n // 1 + (n % 1 > 0)
+floor(n) = n // 1
+parseBin(n) = radixToDecHelper(n, 2, 0)
+radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 delta = 1/10000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
-ans = 393380582/22539047091
+ans = 25

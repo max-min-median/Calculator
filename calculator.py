@@ -12,6 +12,10 @@ from UI import *
 #     def __init__(self):
 #         self.mem = Memory()
 
+# TODO:
+# - allow functions to have 0 params
+# - scrollable display window
+
 def main():
 
     basedir = Path(__file__).resolve().parent
@@ -32,7 +36,8 @@ def main():
                 help.display()
             elif m := re.match(r'^\s*vars\s*$', inp):
                 if len(ui.text["display"]) > 0: ui.addText("display")
-                ui.addText("display", ("User-defined Variables", UI.LIGHTBLUE_ON_BLACK), ("──────────────────────", ))
+                ui.addText("display", ("User-defined Variables", UI.LIGHTBLUE_ON_BLACK))
+                ui.addText("display", ("──────────────────────", ))
                 for k in mainMem._vars:
                     ui.addText("display", (k, UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f"{mainMem._vars[k].value()}", UI.LIGHTBLUE_ON_BLACK))
             elif m := re.match(r'\s*del\s(.*)$', inp):
