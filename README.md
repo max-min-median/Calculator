@@ -9,6 +9,7 @@ This calculator started as an idea for a project for [REDACTED: name of a partic
 ```
 python calculator.py
 ```
+-----------
 
 ## Commands
 | Command | Description |
@@ -22,7 +23,7 @@ python calculator.py
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
 
-───────────────────────────────────────────────────────────────────────────────────────
+-----------
 ## Things to try
 | Input | Notes |
 | ---------- | ----- |
@@ -72,7 +73,7 @@ python calculator.py
 | `sigma(f, l, u) = l <= u && f(l) + sigma(f, l+1, u) \|\| f(l)` | recursive functions are supported |
 | `collatz(n) = (n > 1) && 1 + (n % 2 && collatz(3n + 1) \|\| collatz(n/2))` | Collatz number-of-steps-to-reach-1 |
 
-───────────────────────────────────────────────────────────────────────────────────────
+-----------
 ## List of currently supported math operators/functions:
 
 | Type | Operator |
