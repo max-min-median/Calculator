@@ -1,4 +1,5 @@
 from number import *
+from functions import Function
 import op
 from settings import Settings
 
@@ -57,12 +58,16 @@ class Memory:
         return self.update[str] if str in self.update else None
     
     def add(self, str, val):
-        if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.epsilon)
-        needSort = True if str not in self._vars else False
-        self._vars[str] = val
-        if self.trie is not None: self.trie.insert(str)
-        if needSort:
-            self._vars = {k: self._vars[k] for k in sorted(self._vars, key=lambda x: (-len(x), x))}
+        if str == 'ans':
+            if 'ans' in self._vars: self._vars.pop('ans')
+            self._vars['ans'] = val
+        else:        
+            if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.epsilon)
+            needSort = True if str not in self._vars else False
+            self._vars[str] = val
+            if self.trie is not None: self.trie.insert(str)
+            if needSort:
+                self._vars = {k: self._vars[k] for k in sorted(self._vars, key=lambda x: -isinstance(self._vars[x], Function))}
         self._varsVersion += 1
 
     def delete(self, string):

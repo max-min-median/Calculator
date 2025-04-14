@@ -223,7 +223,7 @@ class ComplexNumber(Number):  # Must be non-real valued, i.e. must have an imagi
 
     def __abs__(self):
         from op import exponentiationFn
-        return exponentiationFn(self.real * self.real + self.im * self.im, half, fcf=True)
+        return exponentiationFn(self.real * self.real + self.im * self.im, half)
 
     def arg(self):
         if self.real == zero: return pi / two if self.im > zero else -pi / two

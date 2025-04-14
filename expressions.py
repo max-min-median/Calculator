@@ -59,7 +59,7 @@ class Expression(Value):
                     continue
                 match L, token:
                     case None, Value():
-                        L = skipEval and dummy or token.value(mem=mem)
+                        L = dummy if skipEval else token.value(mem=mem)
                         index += 1
                         continue
                     case None, Postfix() | Infix():
@@ -82,11 +82,12 @@ class Expression(Value):
                     case Postfix():
                         L = tryOperate(L)
                     case Infix():
+                        from number import zero
                         oldIndex = index
-                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and L.sign == 0 or token == op.logicalOR and L.sign != 0)
+                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and L == zero or token == op.logicalOR and L != zero)
                         if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(oldIndex))
                         elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
-                        else: L = tryOperate(L, exp, mem=mem) if token == op.assignment else tryOperate(L, exp)
+                        else: L = tryOperate(L, exp, mem=mem) if token in (op.assignment, op.functionInvocation) else tryOperate(L, exp)
                     case None:
                         return L, index - 1
                 index += 1

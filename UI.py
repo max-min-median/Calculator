@@ -296,7 +296,7 @@ class UI:
                 else: tabbed = (tabbed + (1 if key == 9 else -1)) % len(nearestWords)
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
-                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Function, Operator))) else '') + chr(key))]
+                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator))) else '') + chr(key))]
                 
                 if self.selectionAnchor is not None:
                     selectL, selectR = sorted([self.selectionAnchor, self.pos])

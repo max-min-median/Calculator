@@ -1,21 +1,19 @@
+area(a, b, c) = a * b * sin c / 2
+binomcdf(n, p, a, b) = binompdf(n, p, a) + ((b > a) && binomcdf(n, p, a + 1, b))
+binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
+collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) || collatz(n/2))
+cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
+cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct(a, b, c, d, e, f) = (bf - ec, cd - af, ae - bd)
 dotProduct(a, b, c, d, e, f) = ad + be + cf
 fibHelper(a, b, n) = n <= 1 && b || fibHelper(b, a + b, n - 1)
-binomcdf(n, p, a, b) = binompdf(n, p, a) + ((b > a) && binomcdf(n, p, a + 1, b))
-binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
-cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
-poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
-poisspdf(lambda, x) = e^-lambda lambda^x / x!
-collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) || collatz(n/2))
-cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
-delta = 1/10000000000000000000
-polar(a) = (abs(a), arg(a))
-sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
-simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
-toDeg = 159121869262581/2777200530560
-area(a, b, c) = a * b * sin c / 2
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
+poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
+poisspdf(lambda, x) = e^-lambda lambda^x / x!
+polar(a) = (abs(a), arg(a))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
-ans = 2/3
-a = 5
+sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
+simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
+delta = 1/10000000000000000000
+toDeg = 159121869262581/2777200530560
