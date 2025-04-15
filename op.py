@@ -377,7 +377,7 @@ power = {
     logicalOR: (3, 3),
     assignment: (2, 1.9),
     ternary_if: (2, 0.5),
-    ternary_else: (0.3, 0),
+    ternary_else: (-1, 0.5),
     semicolonSeparator: (1, 1.1),
     # comma_separator: (1, 1),
     None: (0, 0),

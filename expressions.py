@@ -90,7 +90,7 @@ class Expression(Value):
                         isTrue = L != zero
                         trueVal, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval or not isTrue)
                         if self.parsed[index + 1] != op.ternary_else: raise ParseError("Missing else clause ':' for ternary operator", self.posOfElem(ternaryIndex))
-                        falseVal, index = evaluate(power=token.power[1], index=index+2, skipEval=skipEval or isTrue)
+                        falseVal, index = evaluate(power=op.ternary_else.power[1], index=index+2, skipEval=skipEval or isTrue)
                         L = trueVal if isTrue else falseVal
                     case Postfix():
                         L = tryOperate(L)

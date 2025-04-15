@@ -40,7 +40,7 @@ def main():
                 ui.addText("display", ("──────────────────────", ))
                 for k in mainMem._vars:
                     ui.addText("display", (k, UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f"{mainMem._vars[k].value()}", UI.LIGHTBLUE_ON_BLACK))
-            elif m := re.match(r'\s*del\s(.*)$', inp):
+            elif m := re.match(r'^\s*del\s(.*)$', inp):
                 deleted = mainMem.delete(m.group(1))
                 if not deleted:
                     ui.addText("display", ('Variable(s) not found!', UI.LIGHTBLUE_ON_BLACK))
@@ -49,23 +49,25 @@ def main():
                     for var in deleted:
                         ui.addText("display", (var, UI.LIGHTBLUE_ON_BLACK), (', ', ), startNewLine=False)
                     ui.text["display"][-1].pop()
-            elif m := re.match(r'\s*frac(?:\s+(\d+))?$', inp):
+            elif m := re.match(r'^\s*(?:quit|exit)\s*$', inp):
+                break
+            elif m := re.match(r'^\s*frac(?:\s+(\d+))?$', inp):
                 if m.group(1) is not None: st.set("frac_max_length", int(m.group(1)))
                 ui.addText("display", ("frac_max_length", UI.LIGHTBLUE_ON_BLACK), (' -> ', ), (f"{st.get('frac_max_length')}", UI.LIGHTBLUE_ON_BLACK))
-            elif m := re.match(r'\s*prec(?:ision)?(?:\s+(\d+))?$', inp):
+            elif m := re.match(r'^\s*prec(?:ision)?(?:\s+(\d+))?$', inp):
                 if m.group(1) is not None: st.set("working_precision", int(m.group(1)))
                 ui.addText("display", ("working_precision", UI.LIGHTBLUE_ON_BLACK), (' -> ', ), (f"{st.get('working_precision')}", UI.LIGHTBLUE_ON_BLACK))
-            elif m := re.match(r'\s*disp(?:lay)?(?:\s+(\d+))?$', inp):
+            elif m := re.match(r'^\s*disp(?:lay)?(?:\s+(\d+))?$', inp):
                 if m.group(1) is not None: st.set("final_precision", int(m.group(1)))
                 ui.addText("display", ("final_precision", UI.LIGHTBLUE_ON_BLACK), (' -> ', ), (f"{st.get('final_precision')}", UI.LIGHTBLUE_ON_BLACK))
-            elif m := re.match(r'\s*debug(?:\s+(\w+))?$', inp):
+            elif m := re.match(r'^\s*debug(?:\s+(\w+))?$', inp):
                 flag = {'on':True, 'off':False}.get(m.group(1) if m.group(1) is None else m.group(1).lower(), None)
                 if flag is not None: st.set("debug", flag)
                 else: ui.addText("display", ("Usage: ", ), ("debug [on/off]", UI.LIGHTBLUE_ON_BLACK))
                 ui.addText("display", ("debug", UI.LIGHTBLUE_ON_BLACK), (" -> ", ), (f"{st.get('debug')}", UI.LIGHTBLUE_ON_BLACK))
             elif inp.strip() == '':
                 continue
-            elif m := re.match(r'(?:=|sto(?:re)? |->)\s*([A-Za-z]\w*)', inp):
+            elif m := re.match(r'^\s*(?:=|sto(?:re)? |->)\s*([A-Za-z]\w*)\s*$', inp):
                 if (ans := mainMem.get('ans')) is None:
                     ui.addText("display", ("Variable '", ), ("ans", UI.LIGHTBLUE_ON_BLACK), ("' does not exist or has been deleted", ))
                 else:
