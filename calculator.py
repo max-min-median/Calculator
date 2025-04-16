@@ -13,7 +13,8 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
-# - allow functions to have 0 params
+# - rework Tuples and Functions
+#   - allow Tuple assignment (incl. unpacking)
 # - scrollable display window
 
 def main():

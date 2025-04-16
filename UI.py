@@ -117,7 +117,7 @@ class UI:
         self.inputHistory = []
         self.selectionAnchor = None
         self.pos = 0
-        self.setupWindows()
+        self.setupWindows(firstRun=True)
 
 
     def copyToClipboard(self, s):
@@ -131,11 +131,11 @@ class UI:
             else:
                 self.text["status"] = [[("No clipboard utility found. Install xclip or xsel."[:self.stdscr.getmaxyx()[1] - 3], UI.BRIGHT_RED_ON_BLACK)]]
                 self.statusDuration = 1
-                self.redraw("status")
+                self.redraw("status", limitWidth=True)
                 self.subwins["status"].refresh()
 
 
-    def setupWindows(self) -> dict[str, curses.window]:
+    def setupWindows(self, firstRun=False) -> dict[str, curses.window]:
         os.system("cls" if os.name == "nt" else "clear")
         curses.raw()
         self.stdscr.erase()
@@ -152,11 +152,12 @@ class UI:
         self.subwins["display"].leaveok(True)
         self.subwins["display"].scrollok(True)
         # self.stdscr.subwin(ht // 3, wd, ht // 3, 0).box()
-        self.subwins["status"] = self.stdscr.subwin(1, self.wd - 2, self.ht * 3 // 4 + 1, 1)
+        self.subwins["status"] = self.stdscr.subwin(1, self.wd - 1, self.ht * 3 // 4 + 1, 1)
         self.subwins["status"].leaveok(True)
         self.subwins["status"].scrollok(True)
-        self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
-        self.redraw("status")
+        if firstRun:
+            self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
+        self.redraw("status", limitWidth=True)
         self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
         self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
         self.subwins["input"].leaveok(True)
@@ -207,16 +208,17 @@ class UI:
             if key == curses.KEY_RESIZE:
                 if not self.setupWindows():
                     while key := self.getch():
-                        if key == 27: raise KeyboardInterrupt("Esc")
+                        if key in (17, 27, 433): raise KeyboardInterrupt("Esc")
                         curses.update_lines_cols()
                         if self.setupWindows():
                             break
                 self.redraw("display")
+                self.redraw("input")
                 continue
 
             if self.statusDuration > 0:
                 self.statusDuration -= 1
-                if self.statusDuration == 0: self.redraw("status")
+                if self.statusDuration == 0: self.redraw("status", limitWidth=True)
 
             # Resolve tabbed state if the current key is not a tab or resize
             if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
@@ -323,7 +325,7 @@ class UI:
                 if self.selectionAnchor is not None:
                     selectL, selectR = sorted([self.selectionAnchor, self.pos])
                     self.copyToClipboard(''.join(text[selectL:selectR]))
-            elif key == 27:
+            elif key in (17, 27, 433):
                 raise KeyboardInterrupt("Esc")
             
             self.currWord, self.wordL, self.wordR = self.getWordAtPos(text, self.pos)
@@ -340,7 +342,7 @@ class UI:
                         spaces = '   '
                 else:
                     nearestWords = []
-                if self.statusDuration == 0: self.redraw("status")
+                if self.statusDuration == 0: self.redraw("status", limitWidth=True)
 
             if keys: continue
 
@@ -391,15 +393,25 @@ class UI:
         return self
 
 
-    def redraw(self, windowName):  # does not call doupdate
+    def redraw(self, windowName, limitWidth=False):  # does not call doupdate
         window = self.subwins[windowName]
         window.erase()
         firstLine = True
         for line in self.text[windowName]:
             if not firstLine: window.addstr('\n')
             firstLine = False
-            for item in line:
-                window.addstr(*item)
+            if limitWidth:
+                charsLeft = self.wd - 2
+                for item in line:  # either 1- or 2-tuple
+                    if charsLeft == 0: break
+                    lst = [*item]
+                    charsLeft -= (lenToAdd := min(charsLeft, len(item[0])))
+                    lst[0] = lst[0][:lenToAdd]
+                    window.addstr(*lst)
+            else:
+                for item in line:
+                    window.addstr(*item)
+                    
         window.noutrefresh()
 
 
