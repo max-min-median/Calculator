@@ -25,11 +25,7 @@ parseBin(n) = radixToDecHelper(n, 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c(2^p), p - 1, 10res + c) : 10res + c
-f(x, y) = x + y
 delta = 1/10000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
-w = 2 + 3i
-p = 3 + 5i
-q = 4 - 7i
-ans = -3 - i
+ans = 6
