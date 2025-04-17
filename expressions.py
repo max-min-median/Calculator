@@ -95,9 +95,9 @@ class Expression(Value):
                     case Postfix():
                         L = tryOperate(L)
                     case Infix():
-                        from number import zero
+                        from number import zero, one
                         oldIndex = index
-                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and L == zero or token == op.logicalOR and L != zero)
+                        exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and op.eq.function(L, zero) == one or token == op.logicalOR and op.eq.function(L, zero) == zero)
                         if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(oldIndex))
                         elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
                         else: L = tryOperate(L, exp, mem=mem) if token in (op.assignment, op.functionInvocation) else tryOperate(L, exp)
@@ -137,7 +137,7 @@ class Tuple(Expression):
         super().__init__(inputStr=inputStr, brackets=brackets, parent=parent, parentOffset=parentOffset)
 
     @staticmethod
-    def fromFirst(expr):
+    def fromFirst(expr):  # begins the making of a Tuple from the first character after '('
         tup = Tuple(inputStr=expr.inputStr, brackets=expr.brackets, parent=expr.parent, parentOffset=expr.parentOffset)
         tup.tokens = [expr]
         return tup

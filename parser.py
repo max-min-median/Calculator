@@ -9,10 +9,10 @@ import re
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
 
 def parse(s, startPos=0, brackets='', parent=None):
-    def addToken(t, m=None):
+    def addToken(token, m=None):
         nonlocal pos
-        if t is not None:
-            tokens.append(t)
+        if token is not None:
+            tokens.append(token)
             posList.append(tuple(pos + x for x in m.span(1)))
             # debug and print(f'{tuple(startPos + x for x in posList[-1])}: {t}')
         if m is not None:

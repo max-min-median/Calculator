@@ -12,6 +12,7 @@ class Value:
     def value(self, *args, **kwargs):
         raise NotImplementedError(f'subclass {type(self)} has no implementation of value()')
 
+
 class Var(Value):
     def __init__(self, name):
         super().__init__(name=name)
@@ -22,7 +23,8 @@ class Var(Value):
         val = mem.get(self.name)
         if val is None: raise EvaluationError(f"Variable '{self.name}' not found in memory!")
         return val
-    
+
+
 class LValue(Value):  # variable ready for assignment. Has NO value
     def __init__(self, name='<lValue>', value=None):
         super().__init__(name=name, value=value)
@@ -34,6 +36,7 @@ class LValue(Value):  # variable ready for assignment. Has NO value
     def makeVar(self, value=None):
         if value is None: raise ValueError(f'No value to assign to "{self.name}"')
         return Var(name=self.name, value=value)
+
 
 class WordToken:
     def __init__(self, name='<wordToken>'):
@@ -93,6 +96,4 @@ class WordToken:
         if self.funcMem is not None: wordDict = Memory.combine(self.userMem, self.funcMem)
         else: wordDict = self.userMem.full
         return wordDict
-
-    pass
 

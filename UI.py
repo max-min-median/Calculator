@@ -10,6 +10,7 @@ system = platform.system()
 calcSplash = "MaxCalc v2.2.2-beta by max_min_median"
 
 try:
+    raise ImportError
     import keyboard
     keyboard.is_pressed(29)  # start up `keyboard` listener
 except ImportError:
