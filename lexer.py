@@ -7,7 +7,7 @@ from errors import ParseError
 import re
 
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
-# TODO: Remove dependency / references to 'mem'.
+
 
 class Lexer:
 

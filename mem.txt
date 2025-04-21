@@ -4,8 +4,8 @@ binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
 collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) || collatz(n/2))
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
-crossProduct(a, b, c, d, e, f) = (bf - ec, cd - af, ae - bd)
-dotProduct(a, b, c, d, e, f) = ad + be + cf
+crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
+dotProduct((x1, y1, z1), (x2, y2, z2)) = x1x2 + y1y2 + z1z2
 fibHelper(a, b, n) = n == 0 ? b : fibHelper(b, a + b, n - 1)
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
@@ -15,17 +15,21 @@ polar(a) = (abs(a), arg(a))
 quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
 sigma(f, l, u) = f(l) + (l < u && sigma(f, l + 1, u))
 simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
-fib(n) = fibHelper(1, 0, n)
+fib(n, a = 1, b = 0) = n == 0 ? b : fib(n - 1, b, a + b)
 luhn(n) = luhnHelper(n, 1)
 luhnHelper(n, q) = d = n % 10; n ? (q ? d : 2d > 9 ? 2d - 9 : 2d) + luhnHelper(n // 10, 1 - q) : 0
-reverse(n) = n ? (d = reverse(n // 10); n % 10 * 10^ceil(lg(d + 1)) + d) : 0
+reverse(n, acc = 0) = n == 0 ? acc : reverse(n // 10, 10acc + n % 10)
 ceil(n) = n // 1 + (n % 1 > 0)
 floor(n) = n // 1
-parseBin(n) = radixToDecHelper(n, 2, 0)
+parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
-bin(n, bits) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
+bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c(2^p), p - 1, 10res + c) : 10res + c
-delta = 1/10000000000000000000
-toDeg = 159121869262581/2777200530560
-deg = 89285273844/5115669363931
-ans = 6
+f(x) = x + 1
+proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
+scalarMult(k, (a, b, c)) = (ka, kb, kc)
+mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
+delta = 0
+toDeg = 1204537366/21023143
+deg = 367659/21065309
+parseBin(n) = radixToDecHelper(reverse(n), 2, 0)

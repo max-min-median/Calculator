@@ -81,6 +81,10 @@ class Memory:
                     self.trie.delete(s)
         if deleted: self._varsVersion += 1
         return deleted
+
+    def __getitem__(self, key): return self.get(key)
+    def __setitem__(self, key, value): self.add(key, value)
+    def __delitem__(self, keyString): self.delete(keyString)
     
     def save(self, filename):
         from functions import Function, FuncComposition

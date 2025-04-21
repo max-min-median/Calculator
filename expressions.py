@@ -19,9 +19,8 @@ class Expression(Value):
         self.brackets = brackets  # 2-char string, '()', '[]', '{}' or an empty string.
         self.parent = parent  # parent object
         self.parentOffset = parentOffset  # position of this Expression relative to parent
-        self.displayStr = ''
 
-    def posOfElem(self, i=None, tup=None):  # returns a tuple describing the position of the i-th element in the full string.
+    def posOfElem(self, i, tup=None):  # returns a tuple describing the position of the i-th element in the full string.
         tupToUse = tup if tup is not None else self.parsedPos[i] if self.parsedPos is not None else self.tokenPos[i]
         return tuple(self.offset + x for x in tupToUse)
 
@@ -43,7 +42,9 @@ class Expression(Value):
                     return ret
                 except CalculatorError as e:
                     raise (type(e))(e.args[0], self.posOfElem(index))
-                
+            
+            # TODO Rewrite how stuff is assigned
+            # If a function is identified, everything 
             L = None
             while True:
                 token = self.parsed[index]
@@ -51,7 +52,7 @@ class Expression(Value):
                     if self.parsed[index+1] == op.assignment:
                         self.parsed[index] = token.toLValue()
                     elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
-                        self.parsed[index] = token.toLFunc()
+                        self.parsed[index] = token.toLFunc()  # why does this not exist
                     else:
                         splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
                         self.parsed[index:index+1] = varList
@@ -63,13 +64,18 @@ class Expression(Value):
                         L = dummy if skipEval else token.value(mem=mem)
                         index += 1
                         continue
-                    case None, Postfix() | Infix():
-                        raise ParseError(f"Unexpected operator '{token.name}'", self.posOfElem(index))
+                    # case None, Postfix() | Infix():
+                    #     raise ParseError(f"Unexpected operator '{token.name}'", self.posOfElem(index))
                     # non-Fn-Fn : Low
                     # non-Fn-Prefix : Low
                     # non-Fn-non-Fn : High
                     # Fn-Fn : High
                     case Function(), Expression():
+                        if not isinstance(token, Tuple):
+                            tup = Tuple()
+                            tup.__dict__.update(token.__dict__)
+                            tup.tokens = [token]
+                            self.parsed[index] = tup 
                         token = op.functionInvocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
                         # implicit mult of value to function / prefix, slightly lower precedence. For cases like 'sin2xsin3y'
@@ -105,33 +111,34 @@ class Expression(Value):
                         return L, index - 1
                 index += 1
 
+        # TODO - rewrite this part. Multiple assignment of functions should be possible, e.g. "f(x) = x^2; g(x) = 2x"
+        # Line 52 is not entered because of this section, which assigns "f(x) = x + 1"
         match self.tokens[:3]:  # create new function
             case WordToken(), Expression(), op.assignment:
-                if isinstance(mem, dict):
-                    name = self.tokens[0].name
-                    mem[name] = (fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
-                else:
-                    mem.add(self.tokens[0].name, fn := Function(name=self.tokens[0].name, params=self.tokens[1], expr=self))
-                return fn
-            
-        self.parsed = self.parsed or (self.tokens + [None, None])
-        self.parsedPos = self.parsedPos or (self.tokenPos + [(9999, 9999), (9999, 9999)])
+                name = self.tokens[0].name
+                mem[name] = Function(name=self.tokens[0].name, params=self.tokens[1], expr=self)
+                return mem[name]
+
+        self.parsed = self.tokens + [None, None]
+        self.parsedPos = self.tokenPos + [(9999, 9999), (9999, 9999)]
+        # self.parsed = self.parsed or (self.tokens + [None, None])
+        # self.parsedPos = self.parsedPos or (self.tokenPos + [(9999, 9999), (9999, 9999)])
+        # if (result := evaluate()[0]) is None:
+        #     raise CalculatorError("Expression is empty", self.pos)
         return evaluate()[0]
-            
+
     def __str__(self):
         # from number import RealNumber
-        if self.displayStr == '':
-            # prevToken = None
-            for token in self.tokens:
-                # if isinstance(prevToken, (RealNumber, Var, Postfix)) and isinstance(token, (Var, Prefix)): self.displayStr += '⋅' + str(token)
-                # else: self.displayStr += str(token)
-                self.displayStr += token.fromString if hasattr(token, 'fromString') else str(token)
-                # prevToken = token
-            self.displayStr = self.brackets[:1] + self.displayStr + self.brackets[1:]
-        return self.displayStr
+        s = ''
+        for token in self.tokens:
+            s += token.fromString if hasattr(token, 'fromString') else str(token)
+        s = self.brackets[:1] + s + self.brackets[1:]
+        return s
+
+    def __repr__(self): return f"Expression('{str(self)}')"
 
 
-class Tuple(Expression):
+class Tuple(Expression):  # Tuple elements are all Expressions
 
     def __init__(self, inputStr=None, brackets='()', parent=None, parentOffset=0):
         super().__init__(inputStr=inputStr, brackets=brackets, parent=parent, parentOffset=parentOffset)
@@ -140,20 +147,76 @@ class Tuple(Expression):
     def fromFirst(expr):  # begins the making of a Tuple from the first character after '('
         tup = Tuple(inputStr=expr.inputStr, brackets=expr.brackets, parent=expr.parent, parentOffset=expr.parentOffset)
         tup.tokens = [expr]
+        expr.parent = tup
         return tup
 
     def disp(self, fracMaxLength, decimalPlaces):
         tempTokens = [token.fastContinuedFraction(epsilon=st.finalEpsilon) if hasattr(token, 'fastContinuedFraction') else token for token in self.tokens]
-        self.displayStr = self.brackets[:1] + ', '.join([x.disp(fracMaxLength, decimalPlaces) for x in tempTokens]) + self.brackets[1:]
-        return self.displayStr
+        return self.brackets[:1] + ', '.join(['-' if x is None else x.disp(fracMaxLength, decimalPlaces) for x in tempTokens]) + self.brackets[1:]
+
+    def __len__(self): return len(self.tokens)
 
     def __str__(self):
-        if self.displayStr == '':
-            self.displayStr = self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
-        return self.displayStr
+        return self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
 
     def value(self, mem=None):
         tup = Tuple(inputStr=self.inputStr, brackets=self.brackets, parent=self.parent, parentOffset=self.parentOffset)
         tup.tokenPos = self.tokenPos
         tup.tokens = [expr.value(mem=mem) for expr in self.tokens]
         return tup
+
+    def __repr__(self): return f"Tuple('{str(self)}')"
+
+
+class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
+
+    def __init__(self, tupOrExpr):
+
+        # check validity - each param Expression must be either one WordToken, or a WordToken followed by op.assignment, or a Tuple (which will be converted to LTuple)
+        def checkExpr(expr):
+            if isinstance(expr.tokens[0], Tuple) and not isinstance(expr.tokens[0], LTuple):
+                expr.tokens[0] = LTuple(expr.tokens[0])
+            elif not isinstance(expr.tokens[0], WordToken) or len(expr.tokens) > 1 and expr.tokens[1] != op.assignment:
+                raise ParseError("Each parameter must be exactly one WordToken (with optional default expression)", expr.pos)
+            else:
+                lVal = expr.tokens[0].toLValue()
+                lVal.__dict__.update(expr.tokens[0].__dict__)
+                expr.tokens[0] = lVal
+
+        self.__dict__.update(tupOrExpr.__dict__)
+        if isinstance(tupOrExpr, Tuple):
+            for token in self.tokens:
+                token.parent = self
+                checkExpr(token)
+        else:  # if Expression, then make LTuple a parent of Expression
+            tupOrExpr.parent = self
+            tupOrExpr.parentOffset = 0
+            tupOrExpr.brackets = ''
+            checkExpr(tupOrExpr)
+            self.tokens = [tupOrExpr]
+
+
+    def assign(self, R, mem=None):
+
+        def assignOneParam(param, val):  # each param of an LTuple is an Expression
+            if val is None:  # then use default parameter. Check for WordToken followed by op.assignment
+                if not isinstance(param, Expression) or len(param.tokens) < 3 or not isinstance(param.tokens[0], LValue) or param.tokens[1] != op.assignment:
+                    raise ParseError("Parameter without default argument cannot be omitted")
+                return param.value(mem)
+            else:
+                return op.assignmentFn(param.tokens[0], val, mem=mem)
+
+        if mem is None: raise MemoryError('LTuple requires memory object to perform assignment')
+        if len(R) > len(self): raise ParseError(f"Cannot destructure a {f"tuple of size {len(R)}" if isinstance(R, Tuple) else "value"} into an LTuple of size {len(self)}")
+        if len(self) == 1 and not isinstance(R, Expression):
+            return assignOneParam(self.tokens[0], R)
+        else:
+            for i, param in enumerate(self.tokens):
+                val = R.tokens[i] if i < len(R) else None
+                if isinstance(param, LTuple):
+                    param.assign(val, mem=mem)
+                else:
+                    assignOneParam(param, val)
+        return R
+
+    def __repr__(self): return f"LTuple('{str(self)}')"

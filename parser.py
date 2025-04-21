@@ -1,4 +1,4 @@
-from expressions import Expression, Tuple
+from expressions import Expression, Tuple, LTuple
 from number import RealNumber
 from operators import *
 from vars import LValue, WordToken, Value
@@ -9,7 +9,8 @@ import re
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
 
 def parse(s, startPos=0, brackets='', parent=None):
-    def addToken(token, m=None):
+
+    def addToken(token, m=None):  # modifies 'pos'!
         nonlocal pos
         if token is not None:
             tokens.append(token)
@@ -30,6 +31,7 @@ def parse(s, startPos=0, brackets='', parent=None):
     pos = 0
 
     while ss := s[pos:]:
+
         if ss[0] in ',':  # tuple
             if not brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unexpected comma separator ',' outside a tuple. Please enclose tuples in parentheses '()'.", (startPos + pos, startPos + pos + 1))
             if not isinstance(expr.parent, Tuple):
@@ -44,11 +46,11 @@ def parse(s, startPos=0, brackets='', parent=None):
                 # start a new Expression
                 while not endTuple:
                     if s[pos:] == '': break
-                    tup.tokens.append(expr := parse(s[pos:], startPos=pos, brackets='', parent=tup))
-                    tup.tokenPos.append((pos, pos + (l := len(expr.inputStr)) - 1))
+                    expr = parse(s[pos:], startPos=pos, brackets='', parent=tup)
+                    tup.tokens.append(expr)
+                    tup.tokenPos.append((pos, pos + len(expr.inputStr) - 1))
                     validate(expr)
-                    if expr.inputStr[-1] == ')':
-                        endTuple = True
+                    endTuple = expr.inputStr[-1] == ')'
                     if expr.inputStr[-1] in ',)': expr.inputStr = expr.inputStr[:-1]
                     pos += len(expr.inputStr) + 1
                 tup.inputStr = tup.inputStr[:pos-1]
@@ -57,11 +59,11 @@ def parse(s, startPos=0, brackets='', parent=None):
                 expr.inputStr = expr.inputStr[:pos+1]
                 validate(expr)
                 return expr
-        elif ss[0] in '([{': # bracketed expression
+        elif ss[0] in '([{': # tuple or bracketed expression
             tokens.append(parse(ss[1:], startPos=pos+1, brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], parent=expr))
             posList.append((pos + 1, pos + 1 + (l := len(tokens[-1].inputStr))))
-            pos += l + 2
-        elif ss[0] in ')]}': # end of bracketed expression
+            pos += l + 2  # skip forward to the next element after the tuple
+        elif ss[0] in ')]}': # end of tuple
             if ss[0] not in brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unmatched right delimiter '{ss[0]}'", (startPos + pos, startPos + pos + 1))
             expr.inputStr = expr.inputStr[:pos + isinstance(expr.parent, Tuple)]  # If within a Tuple, leave the closing bracket in the string to be processed later.
             validate(expr)
@@ -78,6 +80,14 @@ def parse(s, startPos=0, brackets='', parent=None):
 
     validate(expr)
     return expr
+
+
+# def stripOuterExpressionFromTuple(expr):
+#     if len(expr.tokens) == 1 and isinstance(expr.tokens[0], Tuple):
+#         tup = Tuple()
+#         tup.__dict__.update(expr.__dict__)
+#         return tup
+#     return expr
 
 
 def validate(expr):
@@ -113,7 +123,8 @@ def validate(expr):
             case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Unexpected operator '{str(lst[i])}'", expr.posOfElem(i-1))
             # UL cannot precede Bin, UR or None
             case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment", expr.posOfElem(i))
-            case _: pass
+            case [_any_, Expression(), op.assignment]:
+                lst[i] = LTuple(lst[i])
         i += 1
     expr.tokens, expr.tokenPos = lst[1:-1], posList[1:-1]
 
@@ -132,11 +143,13 @@ if __name__ == '__main__':
         pass
 
     def testTuple():
-        # exp0 = parse('3 + 5, 2 - 3')
-        exp1 = parse('5+(3+5,1,2-3)-9')
+        # exp0 = parse('(3, 4) + (1, 2)')
+        # exp1 = parse('5+(3+5,1,2-3)-9')
+        exp5 = parse('(a,(b,c),(d=3,f)) = (1,(2,3),(,5))')
+        exp0 = parse('(1 + 2)')
         exp2 = parse('5  +  (   3 +   5, 1,,2 - 3  ) - 9')
         exp3 = parse('5 + ( 3 + 5 , (1, 5, 7) , (((2 , 7), 0), 2, 5)) - 9')
-        exp3 = parse('{5, 3, 2[2, 4')
+        exp4 = parse('{5, 3, 2[2, 4')
         print(str(exp3))
         pass
     
@@ -183,4 +196,4 @@ if __name__ == '__main__':
         # result2 = exp7.value
         pass
 
-    testFunc()
+    testTuple()

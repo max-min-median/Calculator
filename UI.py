@@ -7,7 +7,7 @@ from functions import Function
 from operators import Operator
 
 system = platform.system()
-calcSplash = "MaxCalc v2.2.2-beta by max_min_median"
+calcSplash = "MaxCalc v2.3.0-beta by max_min_median"
 
 try:
     raise ImportError
@@ -77,11 +77,12 @@ class UI:
         return cls._instance
 
 
-    def __init__(self, memory=None):
+    def __init__(self, settings):
         
         if hasattr(self, 'initialized'): return
         else: self.initialized = True
 
+        self.st = settings
         # Initialize curses
         self.stdscr = curses.initscr()
         curses.update_lines_cols()
@@ -110,7 +111,7 @@ class UI:
             # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
 
         self.quickExponents = True
-        self.mem = memory
+        # self.mem = memory
         self.statusDuration = 0
         # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
         self.prompt = (("♦", UI.BRIGHT_ORANGE_ON_BLACK), (">", UI.DIM_ORANGE_ON_BLACK), (" "))

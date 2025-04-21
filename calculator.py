@@ -25,7 +25,7 @@ def main():
     st = Settings(settingsPath)
     mainMem = Memory(memPath)
     mainMem.trie = trie = Trie.fromCollection(mainMem.update)
-    ui = UI(mainMem)
+    ui = UI(st)
     currVersion = mainMem._varsVersion
 
     while True:
@@ -66,13 +66,18 @@ def main():
                 if flag is not None: st.set("debug", flag)
                 else: ui.addText("display", ("Usage: ", ), ("debug [on/off]", UI.LIGHTBLUE_ON_BLACK))
                 ui.addText("display", ("debug", UI.LIGHTBLUE_ON_BLACK), (" -> ", ), (f"{st.get('debug')}", UI.LIGHTBLUE_ON_BLACK))
+            elif m := re.match(r'^\s*(?:kb|keyboard)(?:\s+(\w+))?$', inp):
+                flag = {'on':True, 'off':False}.get(m.group(1) if m.group(1) is None else m.group(1).lower(), None)
+                if flag is not None: st.set("keyboard", flag)
+                else: ui.addText("display", ("Usage: ", ), ("keyboard [on/off] (allows use of keyboard module)", UI.LIGHTBLUE_ON_BLACK))
+                ui.addText("display", ("keyboard", UI.LIGHTBLUE_ON_BLACK), (" -> ", ), (f"{st.get('keyboard')}", UI.LIGHTBLUE_ON_BLACK))
             elif inp.strip() == '':
                 continue
             elif m := re.match(r'^\s*(?:=|sto(?:re)? |->)\s*([A-Za-z]\w*)\s*$', inp):
                 if (ans := mainMem.get('ans')) is None:
                     ui.addText("display", ("Variable '", ), ("ans", UI.LIGHTBLUE_ON_BLACK), ("' does not exist or has been deleted", ))
                 else:
-                    mainMem.add(m.group(1), ans)
+                    mainMem[m.group(1)] = ans
                     ui.trie.insert(m.group(1))
                     ui.addText("display", (f'{m.group(1)}', UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f'{mainMem.get(m.group(1)).value()}', UI.LIGHTBLUE_ON_BLACK))
             else:
@@ -80,7 +85,8 @@ def main():
                 if expr is None: continue
                 val = expr.value(mainMem)
                 if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
-                mainMem.add('ans', val)
+                mainMem['ans'] = val
+                if val is None: raise CalculatorError("Empty expression")
                 ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
             if mainMem._varsVersion != currVersion:
                 mainMem.save(memPath)

@@ -179,13 +179,13 @@ def conjFn(x): return x.conj()
 def argFn(x): return x.arg()
 
 def assignmentFn(L, R, mem=None):
+    from expressions import LTuple
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
-    if isinstance(mem, dict):
-        mem[L.name] = R
-    else:
-        mem.add(L.name, R)
-    return R
+    if isinstance(L, LTuple): return L.assign(R, mem=mem)
+    mem[L.name] = R
+    return mem[L.name]
+
 
 assignment = Infix(' = ', assignmentFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
