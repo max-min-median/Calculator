@@ -6,7 +6,6 @@ cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
 dotProduct((x1, y1, z1), (x2, y2, z2)) = x1x2 + y1y2 + z1z2
-fibHelper(a, b, n) = n == 0 ? b : fibHelper(b, a + b, n - 1)
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
@@ -25,11 +24,14 @@ parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c(2^p), p - 1, 10res + c) : 10res + c
-f(x) = x + 1
+f(n) = (abs(n))^2
 proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
 scalarMult(k, (a, b, c)) = (ka, kb, kc)
 mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
 delta = 0
 toDeg = 1204537366/21023143
 deg = 367659/21065309
-parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
+a = 5/13
+b = 12/13
+w = -59/27
+z = -4083243648147/1913445293767 + 3/2 i

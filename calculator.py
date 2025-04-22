@@ -25,7 +25,7 @@ def main():
     st = Settings(settingsPath)
     mainMem = Memory(memPath)
     mainMem.trie = trie = Trie.fromCollection(mainMem.update)
-    ui = UI(st)
+    ui = UI(mainMem, st)
     currVersion = mainMem._varsVersion
 
     while True:

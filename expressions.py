@@ -42,9 +42,7 @@ class Expression(Value):
                     return ret
                 except CalculatorError as e:
                     raise (type(e))(e.args[0], self.posOfElem(index))
-            
-            # TODO Rewrite how stuff is assigned
-            # If a function is identified, everything 
+
             L = None
             while True:
                 token = self.parsed[index]
@@ -54,7 +52,10 @@ class Expression(Value):
                     elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
                         self.parsed[index] = token.toLFunc()  # why does this not exist
                     else:
-                        splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
+                        try:
+                            splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
+                        except CalculatorError as e:
+                            raise (type(e))(e.args[0], self.posOfElem(index))
                         self.parsed[index:index+1] = varList
                         prev = 0
                         self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]

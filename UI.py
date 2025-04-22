@@ -77,11 +77,12 @@ class UI:
         return cls._instance
 
 
-    def __init__(self, settings):
+    def __init__(self, mem, settings):
         
         if hasattr(self, 'initialized'): return
         else: self.initialized = True
 
+        self.mem = mem
         self.st = settings
         # Initialize curses
         self.stdscr = curses.initscr()

@@ -94,10 +94,9 @@ class WordToken:
         from functions import LFunc
         return LFunc(name=self.name)
     
-    @property
-    def memory(self):
-        from memory import Memory
-        if self.funcMem is not None: wordDict = Memory.combine(self.userMem, self.funcMem)
-        else: wordDict = self.userMem.full
-        return wordDict
-
+    # @property
+    # def memory(self):
+    #     from memory import Memory
+    #     if self.funcMem is not None: wordDict = Memory.combine(self.userMem, self.funcMem)
+    #     else: wordDict = self.userMem.full
+    #     return wordDict
