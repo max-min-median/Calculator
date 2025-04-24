@@ -23,11 +23,17 @@ floor(n) = n // 1
 parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
-binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c(2^p), p - 1, 10res + c) : 10res + c
+binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c) : 10res + c
 proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
 scalarMult(k, (a, b, c)) = (ka, kb, kc)
 mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
-delta = 1/100000000000000000000
+f(x) = x^2 - 5
+root(f, a, b, inc = (b - a)/1000, delta = delta, h = f(b)) = f(a) * h < 0 ? rootFind(f, a, b, delta, f(a), h) : a + inc < b ? root(f, a + inc, b, inc, delta) : ()
+rootFind(f, a, b, delta, l = f(a), h = f(b), m = f((a + b)/2)) = b - a < delta ? (a + b)/2 : m * l < 0 ? rootFind(f, a, (a + b)/2, delta, l, m) : m ? rootFind(f, (a + b)/2, b, delta, m, h) : (a + b)/2
+delta = 1/1000000000000000
 toDeg = 1204537366/21023143
 deg = 367659/21065309
-f(x) = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+a = 614644755191/274877490924
+prec = 30
+disp = 25
+ans = 96450076809/43133785636

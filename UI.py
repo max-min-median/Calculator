@@ -171,25 +171,18 @@ class UI:
         self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
         self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
         self.stdscr.noutrefresh()
-        # self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
-        # self.subwins["display"].leaveok(True)
-        # self.subwins["display"].scrollok(True)
-        # self.redraw("display")
-        self.subwins["display"] = curses.newpad(200, self.wd - 2)
+        self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
         self.subwins["display"].leaveok(True)
         self.subwins["display"].scrollok(True)
-        self.remakePad("display")
         self.subwins["status"] = self.stdscr.subwin(1, self.wd - 1, self.ht * 3 // 4 + 1, 1)
         self.subwins["status"].leaveok(True)
         self.subwins["status"].scrollok(True)
         self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
         self.subwins["input"].leaveok(True)
         self.subwins["input"].scrollok(True)
-        # self.redraw("display")
-        self.refreshDisplay()
+        self.redraw("display")
         self.redraw("input")
         self.redraw("status", limitWidth=True)
-        # curses.doupdate()
         return self.subwins
 
 
@@ -338,7 +331,7 @@ class UI:
                     self.subwins["status"].refresh()
                     if len(self.text["display"]) > 0: self.addText("display")
                     self.addText("display", *self.prompt, (result, ))
-                    if len(self.inputHistory) == 150: self.inputHistory.popleft()
+                    if len(self.inputHistory) == 150: self.inputHistory.pop(0)
                     self.inputHistory.append(result)
                     return result
                 # ignore empty input
@@ -418,17 +411,6 @@ class UI:
         return self
 
 
-    def remakePad(self, padName):
-        pad = self.subwins[padName]
-        pad.erase()
-        firstLine = True
-        for line in self.text[padName]:
-            if not firstLine: pad.addstr('\n')
-            firstLine = False
-            for item in line:
-                pad.addstr(*item)
-
-
     def redraw(self, windowName, limitWidth=False):  # does not call doupdate
         window = self.subwins[windowName]
         window.erase()
@@ -447,14 +429,7 @@ class UI:
             else:
                 for item in line:
                     window.addstr(*item)
-        if windowName == "display":
-            window.noutrefresh(self.subwins["display"].getyx()[0] - (self.ht * 3 // 4 - 2) + 1, 0, 2, 1, 2 + (self.ht * 3 // 4 - 2) - 1, 1 + (self.wd - 2) - 1)
-        else:
-            window.noutrefresh()
-
-    def refreshDisplay(self):
-        window = self.subwins["display"]
-        window.refresh(window.getyx()[0] - (self.ht * 3 // 4 - 2) + 1, 0, 2, 1, 2 + (self.ht * 3 // 4 - 2) - 1, 1 + (self.wd - 2) - 1)
+        window.noutrefresh()
 
 
     def saveHistory(self):

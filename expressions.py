@@ -94,11 +94,11 @@ class Expression(Value):
                             raise ParseError("Unexpected operator ' : '", self.posOfElem(index))
                         from number import zero
                         ternaryIndex = index
-                        isTrue = op.eq.function(L, zero) == zero
+                        if not skipEval: isTrue = op.eq.function(L, zero) == zero
                         trueVal, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval or not isTrue)
                         if self.parsed[index + 1] != op.ternary_else: raise ParseError("Missing else clause ':' for ternary operator", self.posOfElem(ternaryIndex))
                         falseVal, index = evaluate(power=op.ternary_else.power[1], index=index+2, skipEval=skipEval or isTrue)
-                        L = trueVal if isTrue else falseVal
+                        if not skipEval: L = trueVal if isTrue else falseVal
                     case Postfix():
                         L = tryOperate(L)
                     case Infix():
