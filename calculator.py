@@ -22,13 +22,15 @@ def main():
     basedir = Path(__file__).resolve().parent
     memPath = basedir/'mem.txt'
     settingsPath = basedir/'settings.txt'
+    historyPath = basedir/'history.txt'
     st = Settings(settingsPath)
     mainMem = Memory(memPath)
     mainMem.trie = trie = Trie.fromCollection(mainMem.update)
-    ui = UI(mainMem, st)
+    ui = UI(mainMem, st, historyPath)
     currVersion = mainMem._varsVersion
 
     while True:
+        textlen = len(ui.text["display"])
         try:
             inp = ui.getInput(trie=trie) # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             # check for commands
@@ -102,6 +104,7 @@ def main():
         except (EOFError, KeyboardInterrupt):
             break
         ui.redraw("display")
+        if len(ui.text["display"]) > textlen: ui.saveHistory()
 
     ui.end()
 

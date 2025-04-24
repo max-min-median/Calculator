@@ -5,9 +5,11 @@ import subprocess
 from trie import Trie
 from functions import Function
 from operators import Operator
+from collections import deque
+import json
 
 system = platform.system()
-calcSplash = "MaxCalc v2.3.0-beta by max_min_median"
+calcSplash = "MaxCalc v2.3.1-beta by max_min_median"
 
 try:
     raise ImportError
@@ -54,12 +56,15 @@ class UI:
         }
     }
 
+
     pairIdx = None
     @staticmethod
     def makeColorPair(fg, bg):
         UI.pairIdx += 1
         curses.init_pair(UI.pairIdx, fg, bg)
-        return curses.color_pair(UI.pairIdx)
+        newPair = curses.color_pair(UI.pairIdx)
+        UI.pairCodeToIdx[newPair] = UI.pairIdx
+        return newPair
 
     @staticmethod
     def isWordChar(char):
@@ -77,12 +82,13 @@ class UI:
         return cls._instance
 
 
-    def __init__(self, mem, settings):
+    def __init__(self, mem, settings, historyPath):
         
         if hasattr(self, 'initialized'): return
         else: self.initialized = True
 
         self.mem = mem
+        self.historyPath = historyPath
         self.st = settings
         # Initialize curses
         self.stdscr = curses.initscr()
@@ -96,6 +102,7 @@ class UI:
 
         if UI.pairIdx is None:
             UI.pairIdx = 0
+            UI.pairCodeToIdx = {}
             UI.YELLOW_ON_BLACK = UI.makeColorPair(226, -1)
             UI.GREY_ON_BLACK = UI.makeColorPair(241, -1)
             UI.GREEN_ON_BLACK = UI.makeColorPair(10, -1)
@@ -110,17 +117,23 @@ class UI:
             UI.YELLOW_ON_BLUE = UI.makeColorPair(226, 21)
             UI.GREY_ON_BLUE = UI.makeColorPair(241, 21)
             # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
+            UI.pairIdxToCode = {v: k for k, v in UI.pairCodeToIdx.items()}
 
         self.quickExponents = True
         # self.mem = memory
         self.statusDuration = 0
         # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
-        self.prompt = (("♦", UI.BRIGHT_ORANGE_ON_BLACK), (">", UI.DIM_ORANGE_ON_BLACK), (" "))
+        self.prompt = (("♦", UI.BRIGHT_ORANGE_ON_BLACK), (">", UI.DIM_ORANGE_ON_BLACK), (" ", ))
         self.text = {"display": [], "status": [[]], "input": []}
-        self.inputHistory = []
+        self.loadHistory()
         self.selectionAnchor = None
         self.pos = 0
-        self.setupWindows(firstRun=True)
+        self.setupWindows()
+        if "display" in self.subwins: self.redraw("display")
+        if "status" in self.subwins:
+            self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
+            self.redraw("status")
+        curses.doupdate()
 
 
     def copyToClipboard(self, s):
@@ -138,7 +151,7 @@ class UI:
                 self.subwins["status"].refresh()
 
 
-    def setupWindows(self, firstRun=False) -> dict[str, curses.window]:
+    def setupWindows(self) -> dict[str, curses.window]:
         os.system("cls" if os.name == "nt" else "clear")
         curses.raw()
         self.stdscr.erase()
@@ -158,8 +171,6 @@ class UI:
         self.subwins["status"] = self.stdscr.subwin(1, self.wd - 1, self.ht * 3 // 4 + 1, 1)
         self.subwins["status"].leaveok(True)
         self.subwins["status"].scrollok(True)
-        if firstRun:
-            self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
         self.redraw("status", limitWidth=True)
         self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
         self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
@@ -210,7 +221,7 @@ class UI:
             # Handle window resizing
             if key == curses.KEY_RESIZE:
                 if not self.setupWindows():
-                    while key := self.getch():
+                    while key := self.stdscr.getch():
                         if key in (17, 27, 433): raise KeyboardInterrupt("Esc")
                         curses.update_lines_cols()
                         if self.setupWindows():
@@ -319,6 +330,7 @@ class UI:
                     self.subwins["status"].refresh()
                     if len(self.text["display"]) > 0: self.addText("display")
                     self.addText("display", *self.prompt, (result, ))
+                    if len(self.inputHistory) == 150: self.inputHistory.popleft()
                     self.inputHistory.append(result)
                     return result
                 # ignore empty input
@@ -389,10 +401,12 @@ class UI:
         curses.doupdate()
 
 
-    def addText(self, windowName, *strAndAttrTuples, startNewLine=True):
+    def addText(self, windowName, *strAndAttrTuples, startNewLine=True):  # adds text to self.text. Does not redraw window.
         if startNewLine:
             self.text[windowName].append([])
+            if windowName == "display": self.displayHistory.append([])
         self.text[windowName][-1] += strAndAttrTuples
+        if windowName == "display": self.displayHistory[-1] += [tup if len(tup) == 1 else (tup[0], UI.pairCodeToIdx[tup[1]]) for tup in strAndAttrTuples]
         return self
 
 
@@ -414,8 +428,21 @@ class UI:
             else:
                 for item in line:
                     window.addstr(*item)
-                    
         window.noutrefresh()
+
+
+    def saveHistory(self):
+        with open(self.historyPath, "w") as f:
+            f.write(json.dumps([*self.displayHistory]) + '\n')
+            f.write(json.dumps([*self.inputHistory]) + '\n')
+
+    def loadHistory(self):
+        with open(self.historyPath) as f:
+            line = f.readline()
+            self.displayHistory = deque(json.loads(line) if line else [], 150)
+            self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), 150)
+            line = f.readline()
+            self.inputHistory = json.loads(line) if line else []
 
 
     def end(self):
