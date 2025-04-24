@@ -24,11 +24,10 @@ parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c(2^p), p - 1, 10res + c) : 10res + c
-f(x, y) = x^2 + y^2
 proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
 scalarMult(k, (a, b, c)) = (ka, kb, kc)
 mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
 delta = 1/100000000000000000000
 toDeg = 1204537366/21023143
 deg = 367659/21065309
-reverse(n, acc = 0) = n == 0 ? acc : reverse(n // 10, 10acc + n % 10)
+f(x) = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

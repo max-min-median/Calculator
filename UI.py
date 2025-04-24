@@ -1,4 +1,5 @@
 import curses
+from curses.textpad import rectangle
 import os
 import platform
 import subprocess
@@ -129,11 +130,10 @@ class UI:
         self.selectionAnchor = None
         self.pos = 0
         self.setupWindows()
-        if "display" in self.subwins: self.redraw("display")
         if "status" in self.subwins:
             self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
             self.redraw("status")
-        curses.doupdate()
+            curses.doupdate()
 
 
     def copyToClipboard(self, s):
@@ -155,27 +155,41 @@ class UI:
         os.system("cls" if os.name == "nt" else "clear")
         curses.raw()
         self.stdscr.erase()
-        self.ht, self.wd = self.stdscr.getmaxyx()
         self.subwins = {}
-        if self.ht < 17 or self.wd < 44:
+        self.ht, self.wd = self.stdscr.getmaxyx()
+        while self.ht < 17 or self.wd < 44:
+            self.stdscr.erase()
             if self.ht > 3 and self.wd > 15:
                 self.stdscr.addstr(self.ht // 2, self.wd // 2 - 6, "Too small :(")
-                self.stdscr.refresh()
-            return False
+            self.stdscr.refresh()
+            key = self.stdscr.getch()
+            if key in (17, 27, 433): raise KeyboardInterrupt("Esc")
+            curses.update_lines_cols()
+            self.ht, self.wd = self.stdscr.getmaxyx()
+
         self.stdscr.addstr(0, (self.wd - len(calcSplash)) // 2, calcSplash, UI.LIGHTBLUE_ON_BLACK)
         self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
-        self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
+        self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
+        self.stdscr.noutrefresh()
+        # self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
+        # self.subwins["display"].leaveok(True)
+        # self.subwins["display"].scrollok(True)
+        # self.redraw("display")
+        self.subwins["display"] = curses.newpad(200, self.wd - 2)
         self.subwins["display"].leaveok(True)
         self.subwins["display"].scrollok(True)
-        # self.stdscr.subwin(ht // 3, wd, ht // 3, 0).box()
+        self.remakePad("display")
         self.subwins["status"] = self.stdscr.subwin(1, self.wd - 1, self.ht * 3 // 4 + 1, 1)
         self.subwins["status"].leaveok(True)
         self.subwins["status"].scrollok(True)
-        self.redraw("status", limitWidth=True)
-        self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
         self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
         self.subwins["input"].leaveok(True)
         self.subwins["input"].scrollok(True)
+        # self.redraw("display")
+        self.refreshDisplay()
+        self.redraw("input")
+        self.redraw("status", limitWidth=True)
+        # curses.doupdate()
         return self.subwins
 
 
@@ -220,14 +234,8 @@ class UI:
 
             # Handle window resizing
             if key == curses.KEY_RESIZE:
-                if not self.setupWindows():
-                    while key := self.stdscr.getch():
-                        if key in (17, 27, 433): raise KeyboardInterrupt("Esc")
-                        curses.update_lines_cols()
-                        if self.setupWindows():
-                            break
-                self.redraw("display")
-                self.redraw("input")
+                self.setupWindows()
+                self.drawInput(text, tabbed, nearestWords)
                 continue
 
             if self.statusDuration > 0:
@@ -410,6 +418,17 @@ class UI:
         return self
 
 
+    def remakePad(self, padName):
+        pad = self.subwins[padName]
+        pad.erase()
+        firstLine = True
+        for line in self.text[padName]:
+            if not firstLine: pad.addstr('\n')
+            firstLine = False
+            for item in line:
+                pad.addstr(*item)
+
+
     def redraw(self, windowName, limitWidth=False):  # does not call doupdate
         window = self.subwins[windowName]
         window.erase()
@@ -428,7 +447,14 @@ class UI:
             else:
                 for item in line:
                     window.addstr(*item)
-        window.noutrefresh()
+        if windowName == "display":
+            window.noutrefresh(self.subwins["display"].getyx()[0] - (self.ht * 3 // 4 - 2) + 1, 0, 2, 1, 2 + (self.ht * 3 // 4 - 2) - 1, 1 + (self.wd - 2) - 1)
+        else:
+            window.noutrefresh()
+
+    def refreshDisplay(self):
+        window = self.subwins["display"]
+        window.refresh(window.getyx()[0] - (self.ht * 3 // 4 - 2) + 1, 0, 2, 1, 2 + (self.ht * 3 // 4 - 2) - 1, 1 + (self.wd - 2) - 1)
 
 
     def saveHistory(self):

@@ -30,7 +30,6 @@ def main():
     currVersion = mainMem._varsVersion
 
     while True:
-        textlen = len(ui.text["display"])
         try:
             inp = ui.getInput(trie=trie) # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             # check for commands
@@ -104,7 +103,7 @@ def main():
         except (EOFError, KeyboardInterrupt):
             break
         ui.redraw("display")
-        if len(ui.text["display"]) > textlen: ui.saveHistory()
+        ui.saveHistory()
 
     ui.end()
 
