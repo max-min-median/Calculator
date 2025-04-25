@@ -91,5 +91,5 @@ python calculator.py
 | Equality | `==`, `!=` |
 | Relational | `<`, `<=`, `>`, `>=` |
 | Ternary | `<expression> ? <trueVal> : <falseVal>` |
-| Complex | `abs`, `arg`, `conj` |
+| Complex | `abs`, `arg`, `conj`, `Re`, `Im` |
 
