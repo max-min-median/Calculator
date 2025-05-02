@@ -10,7 +10,7 @@ from collections import deque
 import json
 
 system = platform.system()
-calcSplash = "MaxCalc v2.3.1-beta by max_min_median"
+calcSplash = "MaxCalc v2.3.2-beta by max_min_median"
 
 try:
     raise ImportError
@@ -72,18 +72,16 @@ class UI:
         ascii = ord(char)
         return 65 <= ascii <= 90 or 97 <= ascii <= 122 or char in "_'"  # or 48 <= ascii <= 57
 
-    @staticmethod
-    def getInstance():
-        return UI._instance
-
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+        if args or kwargs:
+            cls._instance.initialize(*args, **kwargs)
         return cls._instance
 
 
-    def __init__(self, mem, settings, historyPath):
+    def initialize(self, mem, settings, historyPath):
         
         if hasattr(self, 'initialized'): return
         else: self.initialized = True

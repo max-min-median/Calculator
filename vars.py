@@ -1,4 +1,4 @@
-class Value:    
+class Value:
     def __init__(self, name='<Value>', value=None):
         self.name = name
         self._value = value

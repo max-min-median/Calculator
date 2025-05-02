@@ -24,6 +24,8 @@ class Memory:
         'abs': op.absolute,   # These override user vars
         'arg': op.argument,
         'conj': op.conjugate,
+        'Im': op.imPart,
+        'Re': op.realPart,
         'sin': op.sin,
         'cosec': op.csc,
         'csc': op.csc,

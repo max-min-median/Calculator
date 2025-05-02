@@ -177,6 +177,15 @@ def arctanFn(x):
 def absFn(x): return abs(x)
 def conjFn(x): return x.conj()
 def argFn(x): return x.arg()
+def realPartFn(x):
+    if isinstance(x, RealNumber): return x
+    if isinstance(x, ComplexNumber): return x.real
+    raise EvaluationError('Re() expects a complex number')
+
+def imPartFn(x):
+    if isinstance(x, RealNumber): return zero
+    if isinstance(x, ComplexNumber): return x.im
+    raise EvaluationError('Im() expects a complex number')
 
 def assignmentFn(L, R, mem=None):
     from expressions import LTuple
@@ -250,6 +259,8 @@ sqrt = Prefix('sqrt', lambda x: exponentiationFn(x, half))
 absolute = PrefixFunction('abs', absFn)
 argument = PrefixFunction('arg', argFn)
 conjugate = PrefixFunction('conj', conjFn)
+realPart = PrefixFunction('Re', realPartFn)
+imPart = PrefixFunction('Im', imPartFn)
 exponentiation = Infix('^', exponentiationFn)
 factorial = Postfix('!', factorialFn)
 
@@ -297,6 +308,8 @@ regex = {
     r'(abs)(?![A-Za-z_])': absolute,
     r'(arg)(?![A-Za-z_])': argument,
     r'(conj)(?![A-Za-z_])': conjugate,
+    r'(Re)(?![A-Za-z_])': realPart,
+    r'(Im)(?![A-Za-z_])': imPart,
     r'(sin)(?![A-Za-z_])': sin,
     r'(cos)(?![A-Za-z_])': cos,
     r'(tan)(?![A-Za-z_])': tan,
@@ -331,6 +344,8 @@ power = {
     absolute: (11.1, 10.9),
     argument: (11.1, 10.9),
     conjugate: (11.1, 10.9),
+    realPart: (11.1, 10.9),
+    imPart: (11.1, 10.9),
     sinh: (11.1, 10.9),
     cosh: (11.1, 10.9),
     tanh: (11.1, 10.9),

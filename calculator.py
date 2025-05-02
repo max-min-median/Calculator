@@ -13,9 +13,8 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
-# - rework Tuples and Functions
-#   - allow Tuple assignment (incl. unpacking)
 # - scrollable display window
+# - fix bug when input is too long
 
 def main():
 
