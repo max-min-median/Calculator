@@ -68,10 +68,13 @@ python calculator.py
 | `g(x) = x > 3 && x^2 \|\| x <= 3 && 2x` | domains can be declared using booleans and logical and/or |
 | `h = gff` | composite functions are supported |
 | `h = f^2g^3` | declares h(x) = ffggg(x) |
-| `dot(x1, y1, z1, x2, y2, z2) = x1x2 + y1y2 + z1z2` | multiple parameters are supported |
-| `cross(a, b, c, d, e, f) = (bf-ce, cd-af, ae-bd)` | tuples are supported |
+| `dot((x1, y1, z1), (x2, y2, z2)) = x1x2 + y1y2 + z1z2` | multiple parameters are supported |
+| `cross((a, b, c), (d, e, f)) = (bf-ce, cd-af, ae-bd)` | tuples are supported, even as parameters |
 | `sigma(f, l, u) = l <= u && f(l) + sigma(f, l+1, u) \|\| f(l)` | recursive functions are supported |
-| `collatz(n) = (n > 1) && 1 + (n % 2 && collatz(3n + 1) \|\| collatz(n/2))` | Collatz number-of-steps-to-reach-1 |
+| `collatz(n) = n > 1 && 1 + (n % 2 && collatz(3n + 1) \|\| collatz(n/2))` | Collatz number-of-steps-to-reach-1 |
+| `collatz(n) = n > 1 ? 1 + (n % 2 ? collatz(3n + 1) : collatz(n/2)) : 0` | Alternative of above, using ternaries |
+| `(1 + i)(2 - 3i)` | Complex numbers are fully implemented |
+| `a = 2e^(ipi/4); b = i^i^i; c = sin(i)` | Try some fun complex calculations |
 
 -----------
 ## List of currently supported math operators/functions:
@@ -87,5 +90,6 @@ python calculator.py
 | Logical | `&&`, `\|\|` |
 | Equality | `==`, `!=` |
 | Relational | `<`, `<=`, `>`, `>=` |
+| Ternary | `<expression> ? <trueVal> : <falseVal>` |
+| Complex | `abs`, `arg`, `conj`, `Re`, `Im` |
 
-- Complex numbers are fully implemented. Try calculating `i^i^i` or `sqrt2 e^i(pi/4)`!
