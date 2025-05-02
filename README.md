@@ -23,6 +23,14 @@ python calculator.py
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
 
+| Hotkeys | Description |
+| ------- | ----------- |
+| `Shift + <Arrow>` | Text selection |
+| `Ctrl + <Arrow>` | Jumps forward/backward by one word |
+| `Ctrl + X / C / V` | Cut / Copy / Paste |
+| `Ctrl + A` | Select all |
+| `Ctrl + Bkspc` | Delete word at cursor |
+
 -----------
 ## Things to try
 | Input | Notes |
