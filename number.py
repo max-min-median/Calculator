@@ -272,14 +272,14 @@ class ComplexNumber(Number):  # Must be non-real valued, i.e. must have an imagi
         return self * other.reciprocal()
 
     def __floordiv__(self, other):
-        raise CalculatorError("Cannot perform integer division on non-reals.")
+        raise EvaluationError("Cannot perform integer division on non-reals.")
 
     def __rtruediv__(self, other):
         if isinstance(other, RealNumber): return self.reciprocal() * other
         return NotImplemented
 
     def __gt__(self, other):
-        raise TypeError('Complex value has no total ordering')
+        raise EvaluationError('Complex value has no total ordering')
 
     def __lt__(self, other): return -self > -other
 

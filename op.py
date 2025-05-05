@@ -177,6 +177,7 @@ def arctanFn(x):
 def absFn(x): return abs(x)
 def conjFn(x): return x.conj()
 def argFn(x): return x.arg()
+
 def realPartFn(x):
     if isinstance(x, RealNumber): return x
     if isinstance(x, ComplexNumber): return x.real
@@ -186,6 +187,11 @@ def imPartFn(x):
     if isinstance(x, RealNumber): return zero
     if isinstance(x, ComplexNumber): return x.im
     raise EvaluationError('Im() expects a complex number')
+
+def signumFn(x):
+    if not isinstance(x, RealNumber):
+        raise EvaluationError('sgn() expects a real number')
+    return one if x.sign == 1 else -one
 
 def assignmentFn(L, R, mem=None):
     from expressions import LTuple
@@ -222,6 +228,12 @@ gt = Infix(' > ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.f
 gtEq = Infix(' >= ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) >= zero else zero)
 eq = Infix(' == ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) == zero else zero)
 neq = Infix(' != ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) != zero else zero)
+ltAccurate = Infix(' <* ', lambda x, y: one if x < y else zero)
+ltEqAccurate = Infix(' <== ', lambda x, y: one if x <= y else zero)
+gtAccurate = Infix(' >* ', lambda x, y: one if x > y else zero)
+gtEqAccurate = Infix(' >== ', lambda x, y: one if x >= y else zero)
+eqAccurate = Infix(' === ', lambda x, y: one if x == y else zero)
+neqAccurate = Infix(' !== ', lambda x, y: one if x != y else zero)
 logicalAND = Infix(' && ', lambda x, y: x if x.fastContinuedFraction(epsilon=st.finalEpsilon) == zero else y)
 logicalOR = Infix(' || ', lambda x, y: x if x.fastContinuedFraction(epsilon=st.finalEpsilon) != zero else y)
 functionInvocation = Infix('<invoke>', lambda x, y, mem=None: x.invoke(y, mem=mem))
@@ -256,6 +268,7 @@ weakLn = Prefix('ln ', lnFn)
 weakLg = Prefix('lg ', lambda x: lnFn(x) / ln10)
 weakSqrt = Prefix('sqrt ', lambda x: exponentiationFn(x, half))
 sqrt = Prefix('sqrt', lambda x: exponentiationFn(x, half))
+signum = PrefixFunction('sgn', signumFn)
 absolute = PrefixFunction('abs', absFn)
 argument = PrefixFunction('arg', argFn)
 conjugate = PrefixFunction('conj', conjFn)
@@ -274,6 +287,12 @@ regex = {
     r'\s*(\^)\s*': exponentiation,
     r'\s*(\+)\s+': addition,
     r'\s*(\-)\s+': subtraction,
+    r'\s*(>==)\s*': gtEqAccurate,
+    r'\s*(<==)\s*': ltEqAccurate,
+    r'\s*(===)\s*': eqAccurate,
+    r'\s*(!==)\s*': neqAccurate,
+    r'\s*(>\*)\s*': gtAccurate,
+    r'\s*(<\*)\s*': ltAccurate,
     r'\s*(>=)\s*': gtEq,
     r'\s*(<=)\s*': ltEq,
     r'\s*(==)\s*': eq,
@@ -310,6 +329,7 @@ regex = {
     r'(conj)(?![A-Za-z_])': conjugate,
     r'(Re)(?![A-Za-z_])': realPart,
     r'(Im)(?![A-Za-z_])': imPart,
+    r'(sgn)(?![A-Za-z_])': signum,
     r'(sin)(?![A-Za-z_])': sin,
     r'(cos)(?![A-Za-z_])': cos,
     r'(tan)(?![A-Za-z_])': tan,
@@ -346,6 +366,7 @@ power = {
     conjugate: (11.1, 10.9),
     realPart: (11.1, 10.9),
     imPart: (11.1, 10.9),
+    signum: (11.1, 10.9),
     sinh: (11.1, 10.9),
     cosh: (11.1, 10.9),
     tanh: (11.1, 10.9),
@@ -388,6 +409,12 @@ power = {
     lt: (6, 6),
     eq: (5, 5),
     neq: (5, 5),
+    gtEqAccurate: (6, 6),
+    gtAccurate: (6, 6),
+    ltEqAccurate: (6, 6),
+    ltAccurate: (6, 6),
+    eqAccurate: (5, 5),
+    neqAccurate: (5, 5),
     logicalAND: (4, 4),
     logicalOR: (3, 3),
     assignment: (2, 1.9),

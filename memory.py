@@ -26,6 +26,7 @@ class Memory:
         'conj': op.conjugate,
         'Im': op.imPart,
         'Re': op.realPart,
+        'sgn': op.signum,
         'sin': op.sin,
         'cosec': op.csc,
         'csc': op.csc,

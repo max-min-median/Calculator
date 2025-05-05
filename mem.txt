@@ -5,7 +5,7 @@ collatz(n) = n > 1 ? 1 + (n % 2 ? collatz(3n + 1) : collatz(n/2)) : 0
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
-dotProduct((x1, y1, z1), (x2, y2, z2)) = x1x2 + y1y2 + z1z2
+dotProduct((a, b, c), (p, q, r)) = a conj(p) + b conj(q) + c conj(r)
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
@@ -26,17 +26,16 @@ binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c
 proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
 scalarMult(k, (a, b, c)) = (ka, kb, kc)
 mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
-f(x) = e^x - pi
+f(x) = e^x - 5
 root(f, a, b, inc = (b - a)/1000, delta = delta, h = f(b)) = f(a) * h < 0 ? rootFind(f, a, b, delta, f(a), h) : a + inc < b ? root(f, a + inc, b, inc, delta) : ()
-rootFind(f, a, b, delta, l = f(a), h = f(b), m = f((a + b)/2)) = b - a < delta ? (a, b, (a + b)/2) : m * l < 0 ? rootFind(f, a, (a + b)/2, delta, l, m) : rootFind(f, (a + b)/2, b, delta, m, h)
+rootFind(f, a, b, delta, l = f(a), h = f(b), m = f((a + b)/2)) = b - a <* delta ? (a + b)/2 : m * l <* 0 ? rootFind(f, a, (a + b)/2, delta, l, m) : rootFind(f, (a + b)/2, b, delta, m, h)
 integHelper(f, a, b, dx) = a >= b ? f(b) : f(a) + integHelper(f, a + dx, b, dx)
 integrate(f, a, b, dx = (b - a)/1000) = dx/2 * (f(a) + 2 * integHelper(f, a + dx, b - dx, dx))
 gini(a, b, c) = tot = a + b + c; (a(tot - a) + b(tot - b) + c(tot - c)) / tot^2
 log(a, b) = ln(b)/ln(a)
-sigma = 2862667798328611/2882349707542843
+g(x) = x - (3/8)(2x - 3)^(4/3)
+sigma = 562072386191/565936843563
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
-x = 2124008553358849/781379079653017
-a = 53366388571/46619197446
-gini(a, b, c) = tot = a + b + c; (a(tot - a) + b(tot - b) + c(tot - c)) / tot^2
+ans = 1
