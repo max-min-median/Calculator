@@ -50,7 +50,7 @@ class WordToken:
         return str(self.name)
     
     def splitWordToken(self, mem, nextToken):
-        from operators import Prefix
+        from operators import Prefix, Infix
         from number import Number, RealNumber
         from functions import Function
         from errors import ParseError
@@ -63,13 +63,13 @@ class WordToken:
                 if (thisWord := s[:i+1]) in wordDict:
                     if isinstance(wordDict[thisWord], Number): thisWord = Var(thisWord)
                     else: thisWord = wordDict[thisWord]
-                    if onlyFuncsAllowed and type(thisWord) != Function: continue
-                    if i == len(s) - 1 and type(thisWord) == Prefix and not isinstance(nextToken, Value): continue  # allow stuff like 'ksin3.0pi'
+                    if onlyFuncsAllowed and not isinstance(thisWord, Function): continue
+                    if i == len(s) - 1 and isinstance(thisWord, Prefix) and not isinstance(nextToken, Value): continue  # allow stuff like 'ksin3.0pi'
                 elif numAllowed and not onlyFuncsAllowed and s[:i+1].isdigit() and not s[i+1:i+2].isdigit():
                     thisWord = RealNumber(s[:i+1])
                 else:
                     continue
-                splitRest, splitRestVars = trySplit(s[i+1:], numAllowed=(type(thisWord) == Prefix), onlyFuncsAllowed=(type(thisWord) == Function))
+                splitRest, splitRestVars = trySplit(s[i+1:], numAllowed=isinstance(thisWord, (Prefix, Infix)), onlyFuncsAllowed=(type(thisWord) == Function))
                 lst += [[s[:i+1]] + spl for spl in splitRest]
                 varList += [[thisWord] + spl for spl in splitRestVars]
             return lst, varList

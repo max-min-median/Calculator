@@ -13,7 +13,7 @@ system = platform.system()
 calcSplash = "MaxCalc v2.3.3-beta by max_min_median"
 
 try:
-    raise ImportError
+    raise ImportError  # skips loading `keyboard` - for testing
     import keyboard
     keyboard.is_pressed(29)  # start up `keyboard` listener
 except ImportError:
@@ -312,7 +312,7 @@ class UI:
                 else: tabbed = (tabbed + (1 if key == 9 else -1)) % len(nearestWords)
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
-                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator))) else '') + chr(key))]
+                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or text[self.pos - 1] not in 'PC' and self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator))) else '') + chr(key))]
                 
                 if self.selectionAnchor is not None:
                     selectL, selectR = sorted([self.selectionAnchor, self.pos])

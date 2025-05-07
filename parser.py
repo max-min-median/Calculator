@@ -150,7 +150,8 @@ if __name__ == '__main__':
         exp2 = parse('5  +  (   3 +   5, 1,,2 - 3  ) - 9')
         exp3 = parse('5 + ( 3 + 5 , (1, 5, 7) , (((2 , 7), 0), 2, 5)) - 9')
         exp4 = parse('{5, 3, 2[2, 4')
-        print(str(exp3))
+        exp6 = parse('nC2')
+        print(str(exp6))
         pass
     
     def test1():
