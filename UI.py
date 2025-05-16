@@ -310,6 +310,12 @@ class UI:
                 if not nearestWords: continue
                 if tabbed is False: tabbed = ((nearestWords[0] == self.currWord) if key == 9 else -1) % len(nearestWords)
                 else: tabbed = (tabbed + (1 if key == 9 else -1)) % len(nearestWords)
+            elif chr(key) in '([{' and self.selectionAnchor is not None:
+                selectL, selectR = sorted([self.selectionAnchor, self.pos])
+                text[selectL:selectL] = chr(key)
+                text[selectR + 1:selectR + 1] = {'(': ')', '[': ']', '{': '}'}[chr(key)]
+                self.selectionAnchor += 1
+                self.pos += 1
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
                 typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or text[self.pos - 1] not in 'PC' and self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator))) else '') + chr(key))]

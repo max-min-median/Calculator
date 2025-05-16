@@ -15,7 +15,6 @@ from UI import *
 # TODO:
 # - scrollable display window
 # - fix bug when input is too long
-# - remove quickExponents for C and P
 
 def main():
 
