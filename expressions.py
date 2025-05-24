@@ -2,7 +2,7 @@ from settings import Settings
 from operators import *
 import op
 from vars import Value, Var, WordToken, LValue
-from errors import CalculatorError, ParseError
+from errors import CalculatorError, ParseError, EvaluationError
 from functions import Function
 
 st = Settings()
@@ -73,9 +73,10 @@ class Expression(Value):
                     # Fn-Fn : High
                     case Function(), Expression():
                         if not isinstance(token, Tuple):
-                            tup = Tuple()
-                            tup.__dict__.update(token.__dict__)
-                            tup.tokens = [token]
+                            tup = Tuple.fromExpr(token)
+                            # tup = Tuple()
+                            # tup.__dict__.update(token.__dict__)
+                            # tup.tokens = [token]
                             self.parsed[index] = tup 
                         token = op.functionInvocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
@@ -103,11 +104,11 @@ class Expression(Value):
                         L = tryOperate(L)
                     case Infix():
                         from number import zero, one
+                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(index - 1))
                         oldIndex = index
                         exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and op.eq.function(L, zero) == one or token == op.logicalOR and op.eq.function(L, zero) == zero)
-                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(oldIndex))
-                        elif token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
-                        else: L = tryOperate(L, exp, mem=mem) if token in (op.assignment, op.functionInvocation) else tryOperate(L, exp)
+                        if token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
+                        L = tryOperate(L, exp, mem=mem) if token in (op.assignment, op.functionInvocation) else tryOperate(L, exp)
                     case None:
                         return L, index - 1
                 index += 1
@@ -127,6 +128,7 @@ class Expression(Value):
         # if (result := evaluate()[0]) is None:
         #     raise CalculatorError("Expression is empty", self.pos)
         return evaluate()[0]
+
 
     def __str__(self):
         # from number import RealNumber
@@ -151,14 +153,50 @@ class Tuple(Expression):  # Tuple elements are all Expressions
         expr.parent = tup
         return tup
 
+    @staticmethod
+    def fromExpr(expr):
+        tup = Tuple()
+        tup.__dict__.update(expr.__dict__)
+        tup.tokens = [expr] if len(expr.tokens) > 0 else []
+        expr.brackets = ''
+        return tup
+
     def disp(self, fracMaxLength, decimalPlaces):
         tempTokens = [token.fastContinuedFraction(epsilon=st.finalEpsilon) if hasattr(token, 'fastContinuedFraction') else token for token in self.tokens]
         return self.brackets[:1] + ', '.join(['-' if x is None else x.disp(fracMaxLength, decimalPlaces) for x in tempTokens]) + self.brackets[1:]
 
     def __len__(self): return len(self.tokens)
 
+    def __iter__(self): return iter(self.tokens)
+
+    def __gt__(self, other):
+        if not isinstance(other, Tuple): return NotImplemented
+        for e1, e2 in zip(self, other):
+            if e1 > e2: return True
+        else:
+            return len(e1) > len(e2)
+
+    def __lt__(self, other):
+        if not isinstance(other, Tuple): return NotImplemented
+        for e1, e2 in zip(self, other):
+            if e1 < e2: return True
+        else:
+            return len(e1) < len(e2)
+
+    def __eq__(self, other):
+        if not isinstance(other, Tuple): return NotImplemented
+        for e1, e2 in zip(self, other):
+            if e1 != e2: return False
+        else:
+            return len(e1) == len(e2)
+
+    def __ne__(self, other): return not self == other
+    def __ge__(self, other): return not self < other
+    def __le__(self, other): return not self > other
+
+
     def __str__(self):
-        return self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
+        return self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + (':' if len(self) == 1 else '') + self.brackets[1:]
 
     def value(self, mem=None):
         tup = Tuple(inputStr=self.inputStr, brackets=self.brackets, parent=self.parent, parentOffset=self.parentOffset)
@@ -180,9 +218,7 @@ class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
             elif not isinstance(expr.tokens[0], WordToken) or len(expr.tokens) > 1 and expr.tokens[1] != op.assignment:
                 raise ParseError("Each parameter must be exactly one WordToken (with optional default expression)", expr.pos)
             else:
-                lVal = expr.tokens[0].toLValue()
-                lVal.__dict__.update(expr.tokens[0].__dict__)
-                expr.tokens[0] = lVal
+                expr.tokens[0] = expr.tokens[0].toLValue()
 
         self.__dict__.update(tupOrExpr.__dict__)
         if isinstance(tupOrExpr, Tuple):
@@ -219,5 +255,8 @@ class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
                 else:
                     assignOneParam(param, val)
         return R
+
+    def __str__(self):
+        return self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + self.brackets[1:]
 
     def __repr__(self): return f"LTuple('{str(self)}')"

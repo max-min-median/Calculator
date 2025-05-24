@@ -196,11 +196,38 @@ def signumFn(x):
 def assignmentFn(L, R, mem=None):
     from expressions import LTuple
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
-    if not isinstance(L, LValue): raise TypeError('Can only assign to LValue')
+    if not isinstance(L, LValue): raise EvaluationError('Can only assign to LValue')
     if isinstance(L, LTuple): return L.assign(R, mem=mem)
     mem[L.name] = R
     return mem[L.name]
 
+def indexFn(tup, idx):
+    from expressions import Tuple
+    if not isinstance(tup, Tuple): raise EvaluationError("Index operator expects a tuple")
+    if not isinstance(idx, RealNumber) or not idx.isInt(): raise EvaluationError("Index must be an integer")
+    idx = int(idx)
+    if idx < 0 or idx >= len(tup): raise EvaluationError(f"index {idx} is out of bounds for this tuple")
+    return tup.tokens[idx]
+
+def tupConcatFn(tup1, tup2):
+    from expressions import Tuple
+    if not isinstance(tup1, Tuple) or not isinstance(tup2, Tuple):
+        raise EvaluationError("Tuple concatenation '<+>' expects tuples. End 1-tuples with ':)', e.g. '(3:)'")
+    result = Tuple(tup2.inputStr, tup2.brackets, tup2.parent, tup2.parentOffset)
+    result.tokens = tup1.tokens + tup2.tokens
+    return result
+
+def comparator(x, y):
+    from expressions import Tuple
+    match x, y:
+        case Number(), Number(): return (x - y).fastContinuedFraction(epsilon=st.finalEpsilon)
+        case Tuple(), Tuple():
+            for i, j in zip(x, y):
+                c = comparator(i, j)
+                if c != zero: return c
+            else:
+                return zero if len(x) == len(y) else -one if len(x) < len(y) else one
+        case _, _: raise EvaluationError("Unable to compare expressions")
 
 assignment = Infix(' = ', assignmentFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
@@ -222,12 +249,14 @@ intDiv = Infix(' // ', lambda x, y: x // y)
 modulo = Infix(' % ', lambda x, y: x % y)
 positive = Prefix('+', lambda x: x)
 negative = Prefix('-', lambda x: -x)
-lt = Infix(' < ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) < zero else zero)
-ltEq = Infix(' <= ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) <= zero else zero)
-gt = Infix(' > ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) > zero else zero)
-gtEq = Infix(' >= ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) >= zero else zero)
-eq = Infix(' == ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) == zero else zero)
-neq = Infix(' != ', lambda x, y: one if (x - y).fastContinuedFraction(epsilon=st.finalEpsilon) != zero else zero)
+indexing = Infix(' @ ', indexFn)
+tupConcat = Infix(' <+> ', tupConcatFn)
+lt = Infix(' < ', lambda x, y: one if comparator(x, y) < zero else zero)
+ltEq = Infix(' <= ', lambda x, y: one if comparator(x, y) <= zero else zero)
+gt = Infix(' > ', lambda x, y: one if comparator(x, y) > zero else zero)
+gtEq = Infix(' >= ', lambda x, y: one if comparator(x, y) >= zero else zero)
+eq = Infix(' == ', lambda x, y: one if comparator(x, y) == zero else zero)
+neq = Infix(' != ', lambda x, y: one if comparator(x, y) != zero else zero)
 ltAccurate = Infix(' <* ', lambda x, y: one if x < y else zero)
 ltEqAccurate = Infix(' <== ', lambda x, y: one if x <= y else zero)
 gtAccurate = Infix(' >* ', lambda x, y: one if x > y else zero)
@@ -291,6 +320,7 @@ regex = {
     r'\s*(<==)\s*': ltEqAccurate,
     r'\s*(===)\s*': eqAccurate,
     r'\s*(!==)\s*': neqAccurate,
+    r'\s*(<\+>)\s*': tupConcat,
     r'\s*(>\*)\s*': gtAccurate,
     r'\s*(<\*)\s*': ltAccurate,
     r'\s*(>=)\s*': gtEq,
@@ -306,6 +336,7 @@ regex = {
     r'\s*(&&)\s*': logicalAND,
     r'\s*(\|\|)\s*': logicalOR,
     r'\s*(=)\s*': assignment,
+    r'\s*(@)\s*': indexing,
     r'(sinh)\s+': weakSinh,
     r'(cosh)\s+': weakCosh,
     r'(tanh)\s+': weakTanh,
@@ -377,6 +408,7 @@ power = {
     lg: (11.1, 10.9),
     negative: (11.1, 10.9),
     positive: (11.1, 10.9),
+    indexing: (10, 10),
     implicitMultPrefix: (10, 10),
     fracDiv: (9.5, 9.5),
     weakSqrt: (11.1, 8.9),
@@ -403,6 +435,7 @@ power = {
     spaceSeparator: (8, 8),
     subtraction: (7, 7),
     addition: (7, 7),
+    tupConcat: (7, 7),
     gtEq: (6, 6),
     gt: (6, 6),
     ltEq: (6, 6),

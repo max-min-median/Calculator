@@ -88,7 +88,9 @@ class WordToken:
         return splitList[0], varList[0]
 
     def toLValue(self):
-        return LValue(name=self.name)
+        lVal = LValue(name=self.name)
+        lVal.__dict__.update(self.__dict__)
+        return lVal
 
     def toLFunc(self):
         from functions import LFunc

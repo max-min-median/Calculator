@@ -13,6 +13,9 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
+# - 0 param functions
+# - concatenation of 0-tuples
+# - just fix 0-tuples in general
 # - scrollable display window
 # - fix bug when input is too long
 

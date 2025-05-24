@@ -28,12 +28,13 @@ def parse(s, startPos=0, brackets='', parent=None):
     
     expr = Expression(inputStr=s, brackets=brackets, parent=parent, parentOffset=startPos)
     tokens, posList = expr.tokens, expr.tokenPos
+    offsetOfParent = 0 if parent is None else parent.offset
     pos = 0
 
     while ss := s[pos:]:
 
-        if ss[0] in ',':  # tuple
-            if not brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unexpected comma separator ',' outside a tuple. Please enclose tuples in parentheses '()'.", (startPos + pos, startPos + pos + 1))
+        if ss[0] == ',':  # tuple
+            if not brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unexpected comma separator ',' outside a tuple. Please enclose tuples in parentheses '()'.", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
             if not isinstance(expr.parent, Tuple):
                 tup = Tuple.fromFirst(expr)
                 tup.tokenPos.append((0, pos))
@@ -50,9 +51,12 @@ def parse(s, startPos=0, brackets='', parent=None):
                     tup.tokens.append(expr)
                     tup.tokenPos.append((pos, pos + len(expr.inputStr) - 1))
                     validate(expr)
-                    endTuple = expr.inputStr[-1] == ')'
-                    if expr.inputStr[-1] in ',)': expr.inputStr = expr.inputStr[:-1]
-                    pos += len(expr.inputStr) + 1
+                    endTuple = expr.inputStr[-1] == tup.brackets[-1]
+                    pos += len(expr.inputStr)
+                    if expr.inputStr[-1] == ',':
+                        expr.inputStr = expr.inputStr[:-1]
+                    elif expr.inputStr[-2:] == ':' + tup.brackets[-1]:
+                        expr.inputStr = expr.inputStr[:-2]
                 tup.inputStr = tup.inputStr[:pos-1]
                 return tup
             else:
@@ -62,10 +66,13 @@ def parse(s, startPos=0, brackets='', parent=None):
         elif ss[0] in '([{': # tuple or bracketed expression
             tokens.append(parse(ss[1:], startPos=pos+1, brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], parent=expr))
             posList.append((pos + 1, pos + 1 + (l := len(tokens[-1].inputStr))))
-            pos += l + 2  # skip forward to the next element after the tuple
-        elif ss[0] in ')]}': # end of tuple
-            if ss[0] not in brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unmatched right delimiter '{ss[0]}'", (startPos + pos, startPos + pos + 1))
-            expr.inputStr = expr.inputStr[:pos + isinstance(expr.parent, Tuple)]  # If within a Tuple, leave the closing bracket in the string to be processed later.
+            pos += l + 2 + (isinstance(tokens[-1], Tuple) and len(tokens[-1]) == 1) # skip forward to the next element after the tuple (tuples of length 1 have an extra underscore)
+        elif (rb := ss[0]) in ')]}' or (rb := ss[:2])[0] == ':' and rb[1] in ')]}': # end of tuple
+            if brackets and rb[-1] not in brackets or brackets == '' and (expr.parent is None or rb[-1] not in expr.parent.brackets):
+                raise ParseError(f"Unmatched right delimiter '{rb}'", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
+            if rb[0] == ':' and not isinstance(expr.parent, Tuple):  # if expr is not the last field of a Tuple, convert it to a tuple.
+                expr = Tuple.fromExpr(expr)
+            expr.inputStr = expr.inputStr[:pos + (isinstance(expr.parent, Tuple) and len(rb))]  # If within a Tuple, leave the closing bracket in the string to be processed later.
             validate(expr)
             return expr
         elif m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', ss):   # Number. Cannot follow Number, spaceSeparator, or Var
@@ -76,7 +83,7 @@ def parse(s, startPos=0, brackets='', parent=None):
             # if tokens[-1] is not None and tokens[-1] is not Op.assignment: raise ParseError(f'Cannot assign to invalid l-value (pos {startPos + pos}). Did you mean "==" instead?')
             addToken(WordToken(m.group()), m)
         else:
-            raise ParseError(f"Unrecognized symbol '{ss[0]}'", (startPos + pos, startPos + pos + 1))
+            raise ParseError(f"Unrecognized symbol '{ss[0]}'", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
 
     validate(expr)
     return expr
