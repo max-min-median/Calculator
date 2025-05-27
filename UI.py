@@ -442,12 +442,17 @@ class UI:
             f.write(json.dumps([*self.inputHistory]) + '\n')
 
     def loadHistory(self):
-        with open(self.historyPath) as f:
-            line = f.readline()
-            self.displayHistory = deque(json.loads(line) if line else [], 150)
-            self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), 150)
-            line = f.readline()
-            self.inputHistory = json.loads(line) if line else []
+        try:
+            with open(self.historyPath) as f:
+                line = f.readline()
+                self.displayHistory = deque(json.loads(line) if line else [], 150)
+                self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), 150)
+                line = f.readline()
+                self.inputHistory = json.loads(line) if line else []
+        except FileNotFoundError:
+            self.displayHistory = deque([], 150)
+            self.text["display"] = deque([], 150)
+            self.inputHistory = []
 
 
     def end(self):

@@ -6,7 +6,7 @@ cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
 dotProduct(u, v) = u$ ? u @ 0 conj(v @ 0) + dotProduct(1 </ u, 1 </ v) : 0
-grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
+grad(x, y) = (yx^2 + 2y)/(x^2 - 4)
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
 poisspdf(lambda, x) = e^-lambda lambda^x / x!
@@ -22,7 +22,7 @@ parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c) : 10res + c
-proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
+proj(u, v) = k = 1/norm(v)^2 * dotProduct(u, v); map(f(x) = kx, v)
 scalarMult(k, (a, b, c, d)) = (ka, kb, kc, kd)
 mag((a, b, c)) = sqrt(a^2 + b^2 + c^2)
 root(f, a, b, inc = (b - a)/1000, delta = delta, h = f(b)) = f(a) * h < 0 ? rootFind(f, a, b, delta, f(a), h) : a + inc < b ? root(f, a + inc, b, inc, delta) : ()
@@ -41,11 +41,18 @@ gym(a, b = 0, c = 0, d = 0, q = 0) = (45 + 2(45a + 25b + 10c + 5d + 2.5q)) lbToK
 vecSum((a, b, c, d), (e, f, g, h)) = (a + e, b + f, c + g, d + h)
 sumOfRoots(a, b, c) = q = quad(a, b, c); q @ 0 + q @ 1
 map(f, v) = v$ ? (f(v @ 0):) <+> map(f, 1 </ v) : ()
-reduce(f, v, a) = v$ ? reduce(f, 1 </ v, f(a, v @ 0)) : a
+reduce(f, v, a = 0) = v$ ? reduce(f, 1 </ v, f(a, v @ 0)) : a
 transpose(m, result = (), col = (), r = 0, c = 0) = result$ == (m @ 0)$ ? result : r == m$ ? transpose(m, result <+> (col:), (), 0, c + 1) : transpose(m, result, col <+> (m @ r @ c:), r + 1, c)
 matrixMult(A, B) = B = transpose(B); (helper(result = (), row = (), r = 0, c = 0) = r == A$ ? result : c == B$ ? helper(result <+> (row:), (), r + 1, 0) : helper(result, row <+> (dotProduct(A @ r, B @ c):), r, c + 1))()
+filter(pred, v) = v$ ? (pred(v @ 0) ? (v @ 0:) : ()) <+> filter(pred, 1 </ v) : ()
+sum(v) = reduce(f(x, y) = x + y, v, 0)
+fibSequence(n, result = (1, 1)) = result$ >= n ? n /> result : fibSequence(n, result <+> (sum(result </ 2):))
+norm(v) = sqrt(reduce(f(prev, x) = prev + x^2, v))
+stdDev(v) = sqrt(var(v))
+var(v) = sumSq = sum(map(square(x) = x^2, v)); mean = sum(v) / v$; sumSq / v$ - mean^2
+euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
-proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
+ans = 944163/12500000
