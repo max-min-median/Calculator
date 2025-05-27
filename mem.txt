@@ -31,7 +31,6 @@ integHelper(f, a, b, dx) = a >= b ? f(b) : f(a) + integHelper(f, a + dx, b, dx)
 integrate(f, a, b, dx = (b - a)/1000) = dx/2 * (f(a) + 2 * integHelper(f, a + dx, b - dx, dx))
 gini(a, b, c) = tot = a + b + c; (a(tot - a) + b(tot - b) + c(tot - c)) / tot^2
 log(a, b) = ln(b)/ln(a)
-g(x) = x^2
 cpd(prin, I, t) = prin(1 + I)^t
 gcd(a, b) = a ? gcd(b % a, a) : b
 summation(f, l, u) = l <= u ? f(l) + summation(f, l + 1, u) : 0
@@ -49,3 +48,4 @@ delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
+proj(u, v) = scalarMult(1/(mag(v))^2 * dotProduct(u, v), v)
