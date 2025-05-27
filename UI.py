@@ -10,7 +10,7 @@ from collections import deque
 import json
 
 system = platform.system()
-calcSplash = "MaxCalc v2.3.3-beta by max_min_median"
+calcSplash = "MaxCalc v3.0.0-beta by max_min_median"
 
 try:
     raise ImportError  # skips loading `keyboard` - for testing

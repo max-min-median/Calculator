@@ -194,7 +194,7 @@ def signumFn(x):
     return one if x.sign == 1 else -one
 
 def assignmentFn(L, R, mem=None):
-    from expressions import LTuple
+    from tuples import LTuple
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise EvaluationError('Can only assign to LValue')
     if isinstance(L, LTuple): return L.assign(R, mem=mem)
@@ -202,23 +202,53 @@ def assignmentFn(L, R, mem=None):
     return mem[L.name]
 
 def indexFn(tup, idx):
-    from expressions import Tuple
+    from tuples import Tuple
     if not isinstance(tup, Tuple): raise EvaluationError("Index operator expects a tuple")
     if not isinstance(idx, RealNumber) or not idx.isInt(): raise EvaluationError("Index must be an integer")
     idx = int(idx)
     if idx < 0 or idx >= len(tup): raise EvaluationError(f"index {idx} is out of bounds for this tuple")
     return tup.tokens[idx]
 
+def tupLengthFn(tup):
+    from tuples import Tuple
+    if not isinstance(tup, Tuple): raise EvaluationError("Length operator expects a tuple")
+    return RealNumber(len(tup))
+
 def tupConcatFn(tup1, tup2):
-    from expressions import Tuple
+    from tuples import Tuple
     if not isinstance(tup1, Tuple) or not isinstance(tup2, Tuple):
-        raise EvaluationError("Tuple concatenation '<+>' expects tuples. End 1-tuples with ':)', e.g. '(3:)'")
+        raise EvaluationError("Concatenation '<+>' expects tuples. End 1-tuples with ':)', e.g. '(3:)'")
     result = Tuple(tup2.inputStr, tup2.brackets, tup2.parent, tup2.parentOffset)
     result.tokens = tup1.tokens + tup2.tokens
     return result
 
+def knifeFn(dir):
+    from tuples import Tuple
+    def check(L, R):
+        if isinstance(L, RealNumber):
+            if not L.isInt(): raise EvaluationError("Index must be an integer")
+            if not isinstance(R, Tuple): raise EvaluationError(f"Knife operator '{dir}' expects a tuple and an integer")
+            L = int(L)
+            if L < 0 or L > len(R): raise EvaluationError(f"Unable to slice {L} element(s) from this tuple")
+            return True
+        return False
+    
+    def knife(L, R):
+        if check(L, R):
+            tup = R.morphCopy()
+            mid = int(L)
+        elif check(R, L):
+            tup = L.morphCopy()
+            mid = len(tup) - int(R)
+        else: raise EvaluationError(f"Knife operator encountered an unexpected error: L = {L}, R = {R}")
+        tup.tokens = tup.tokens[mid:] if dir == '</' else tup.tokens[:mid]
+        return tup
+
+    return knife
+
+
 def comparator(x, y):
-    from expressions import Tuple
+    from tuples import Tuple
     match x, y:
         case Number(), Number(): return (x - y).fastContinuedFraction(epsilon=st.finalEpsilon)
         case Tuple(), Tuple():
@@ -227,7 +257,8 @@ def comparator(x, y):
                 if c != zero: return c
             else:
                 return zero if len(x) == len(y) else -one if len(x) < len(y) else one
-        case _, _: raise EvaluationError("Unable to compare expressions")
+        case _, _: raise EvaluationError("Unable to compare operands")
+
 
 assignment = Infix(' = ', assignmentFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
@@ -250,7 +281,10 @@ modulo = Infix(' % ', lambda x, y: x % y)
 positive = Prefix('+', lambda x: x)
 negative = Prefix('-', lambda x: -x)
 indexing = Infix(' @ ', indexFn)
+leftKnife = Infix(' </ ', knifeFn('</'))
+rightKnife = Infix(' /> ', knifeFn('/>'))
 tupConcat = Infix(' <+> ', tupConcatFn)
+tupLength = Postfix('$', tupLengthFn)
 lt = Infix(' < ', lambda x, y: one if comparator(x, y) < zero else zero)
 ltEq = Infix(' <= ', lambda x, y: one if comparator(x, y) <= zero else zero)
 gt = Infix(' > ', lambda x, y: one if comparator(x, y) > zero else zero)
@@ -307,6 +341,8 @@ exponentiation = Infix('^', exponentiationFn)
 factorial = Postfix('!', factorialFn)
 
 regex = {
+    r'\s*(<\/)\s*': leftKnife,
+    r'\s*(\/>)\s*': rightKnife,
     r'\s*(\/\/)\s*': intDiv,
     r'\s+(\/)\s+': division,
     r'(?<!\s)(\/)(?!\s)': fracDiv,
@@ -337,6 +373,7 @@ regex = {
     r'\s*(\|\|)\s*': logicalOR,
     r'\s*(=)\s*': assignment,
     r'\s*(@)\s*': indexing,
+    r'(\$)\s*': tupLength,
     r'(sinh)\s+': weakSinh,
     r'(cosh)\s+': weakCosh,
     r'(tanh)\s+': weakTanh,
@@ -380,9 +417,10 @@ regex = {
 }
 
 power = {
-    # functionInvocation: (10.1, 99),  (why did I choose such a low precedence for this)
-    functionInvocation: (13, 99),
+    functionInvocation: (10.1, 99),  # why did I choose such a low precedence for this?
+    # functionInvocation: (13, 99),
     factorial: (12, 12.1),
+    tupLength: (12, 12.1),
     implicitMult: (11, 11),
     exponentiation: (11.1, 10.9),
     sqrt: (11.1, 10.9),
@@ -409,6 +447,8 @@ power = {
     negative: (11.1, 10.9),
     positive: (11.1, 10.9),
     indexing: (10, 10),
+    leftKnife: (10, 10),
+    rightKnife: (10, 10),
     implicitMultPrefix: (10, 10),
     fracDiv: (9.5, 9.5),
     weakSqrt: (11.1, 8.9),
@@ -452,7 +492,7 @@ power = {
     logicalOR: (3, 3),
     assignment: (2, 1.9),
     ternary_if: (2, 0.5),
-    ternary_else: (-1, 0.5),
+    ternary_else: (0.1, 0.5),
     semicolonSeparator: (1, 1.1),
     # comma_separator: (1, 1),
     None: (0, 0),

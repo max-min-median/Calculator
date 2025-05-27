@@ -1,24 +1,24 @@
 area(a, b, c) = a * b * sin c / 2
 binomcdf(n, p, a, b) = binompdf(n, p, a) + ((b > a) && binomcdf(n, p, a + 1, b))
 binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
-collatz(n_) = n > 1 ? 1 + (n % 2 ? collatz(3n + 1) : collatz(n/2)) : 0
+collatz(n) = n > 1 ? 1 + (n % 2 ? collatz(3n + 1) : collatz(n/2)) : 0
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
 crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
-dotProduct((a, b, c, d), (p, q, r, s)) = a conj(p) + b conj(q) + c conj(r) + d conj(s)
+dotProduct(u, v) = u$ ? u @ 0 conj(v @ 0) + dotProduct(1 </ u, 1 </ v) : 0
 grad(f, x) = (f(x + 1/100000000000000000000) - f(x - 1/100000000000000000000)) / 2/100000000000000000000
 hero(a, b, c) = s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
 poisspdf(lambda, x) = e^-lambda lambda^x / x!
-polar(a_) = (abs(a), arg(a))
-quad(a, b, c) = ((-b - sqrt(b^2 - 4ac))/2a, (-b + sqrt(b^2 - 4ac))/2a)
+polar(x) = (abs(x), arg(x))
+quad(a, b, c) = sqrtD = sqrt(b^2 - 4ac); ((-b - sqrtD)/2a, (-b + sqrtD)/2a)
 simul(a, b, c, d, e, f) = ((bf - ce)/(bd - ae), (cd - af)/(bd - ae))
 fib(n, a = 1, b = 0) = n == 0 ? b : fib(n - 1, b, a + b)
 luhn(n, q = 1) = d = n % 10; n ? (q ? d : 2d > 9 ? 2d - 9 : 2d) + luhn(n // 10, 1 - q) : 0
 reverse(n, acc = 0) = n == 0 ? acc : reverse(n // 10, 10acc + n % 10)
-ceil(n_) = n // 1 + (n % 1 > 0)
-floor(n_) = n // 1
-parseBin(n_) = radixToDecHelper(reverse(n), 2, 0)
+ceil(n) = n // 1 + (n % 1 > 0)
+floor(n) = n // 1
+parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c) : 10res + c
@@ -31,24 +31,21 @@ integHelper(f, a, b, dx) = a >= b ? f(b) : f(a) + integHelper(f, a + dx, b, dx)
 integrate(f, a, b, dx = (b - a)/1000) = dx/2 * (f(a) + 2 * integHelper(f, a + dx, b - dx, dx))
 gini(a, b, c) = tot = a + b + c; (a(tot - a) + b(tot - b) + c(tot - c)) / tot^2
 log(a, b) = ln(b)/ln(a)
-g(x_) = x + 1
+g(x) = x^2
 cpd(prin, I, t) = prin(1 + I)^t
 gcd(a, b) = a ? gcd(b % a, a) : b
 summation(f, l, u) = l <= u ? f(l) + summation(f, l + 1, u) : 0
-v(k_) = (e^(ikpi/2 * 0), e^(ikpi/2 * 1), e^(ikpi/2 * 2), e^(ikpi/2 * 3))
-f(x) = x
 binCoeff(c, n, r, acc = 1) = r ? binCoeff(c, n, r - 1, acc * c * (n - r + 1) / r) : acc
 normpdf(x, mu = 0, sigma = 1) = 1/(sqrt(2pi) * sigma) e^(-1/2 ((x - mu)/sigma)^2)
 normcdf(a, b, mu = 0, sigma = 1) = integrate(normpdf, (a - mu)/sigma, (b - mu)/sigma)
 gym(a, b = 0, c = 0, d = 0, q = 0) = (45 + 2(45a + 25b + 10c + 5d + 2.5q)) lbToKg
 vecSum((a, b, c, d), (e, f, g, h)) = (a + e, b + f, c + g, d + h)
-h(x_) = -x log(2, x)
-A(x_) = pi/2 * (x/(pi + 2))^2 + (2 - x/4)^2
+sumOfRoots(a, b, c) = q = quad(a, b, c); q @ 0 + q @ 1
+map(f, v) = v$ ? (f(v @ 0):) <+> map(f, 1 </ v) : ()
+reduce(f, v, a) = v$ ? reduce(f, 1 </ v, f(a, v @ 0)) : a
+transpose(m, result = (), col = (), r = 0, c = 0) = result$ == (m @ 0)$ ? result : r == m$ ? transpose(m, result <+> (col:), (), 0, c + 1) : transpose(m, result, col <+> (m @ r @ c:), r + 1, c)
+matrixMult(A, B) = B = transpose(B); (helper(result = (), row = (), r = 0, c = 0) = r == A$ ? result : c == B$ ? helper(result <+> (row:), (), r + 1, 0) : helper(result, row <+> (dotProduct(A @ r, B @ c):), r, c + 1))()
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
-a_b = 5
-x = 1
-y = 2
-z = 4

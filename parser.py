@@ -1,10 +1,12 @@
-from expressions import Expression, Tuple, LTuple
+from expressions import Expression
+from tuples import *
 from number import RealNumber
 from operators import *
 from vars import LValue, WordToken, Value
 import op
 from errors import ParseError
 import re
+
 
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
 
@@ -30,51 +32,38 @@ def parse(s, startPos=0, brackets='', parent=None):
     tokens, posList = expr.tokens, expr.tokenPos
     offsetOfParent = 0 if parent is None else parent.offset
     pos = 0
-
+    # print(f"Parsing '{s}', brackets: {brackets}, parent: {parent}")
     while ss := s[pos:]:
-
-        if ss[0] == ',':  # tuple
-            if not brackets and not isinstance(expr.parent, Tuple): raise ParseError(f"Unexpected comma separator ',' outside a tuple. Please enclose tuples in parentheses '()'.", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
-            if not isinstance(expr.parent, Tuple):
-                tup = Tuple.fromFirst(expr)
-                tup.tokenPos.append((0, pos))
-                expr = tup.tokens[0]
-                expr.brackets = ''
-                expr.inputStr = expr.inputStr[:pos]
-                validate(expr)
-                endTuple = False
-                pos += 1
-                # start a new Expression
-                while not endTuple:
-                    if s[pos:] == '': break
-                    expr = parse(s[pos:], startPos=pos, brackets='', parent=tup)
-                    tup.tokens.append(expr)
-                    tup.tokenPos.append((pos, pos + len(expr.inputStr) - 1))
-                    validate(expr)
-                    endTuple = expr.inputStr[-1] == tup.brackets[-1]
-                    pos += len(expr.inputStr)
-                    if expr.inputStr[-1] == ',':
-                        expr.inputStr = expr.inputStr[:-1]
-                    elif expr.inputStr[-2:] == ':' + tup.brackets[-1]:
-                        expr.inputStr = expr.inputStr[:-2]
-                tup.inputStr = tup.inputStr[:pos-1]
-                return tup
-            else:
-                expr.inputStr = expr.inputStr[:pos+1]
-                validate(expr)
-                return expr
-        elif ss[0] in '([{': # tuple or bracketed expression
-            tokens.append(parse(ss[1:], startPos=pos+1, brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], parent=expr))
-            posList.append((pos + 1, pos + 1 + (l := len(tokens[-1].inputStr))))
-            pos += l + 2 + (isinstance(tokens[-1], Tuple) and len(tokens[-1]) == 1) # skip forward to the next element after the tuple (tuples of length 1 have an extra underscore)
-        elif (rb := ss[0]) in ')]}' or (rb := ss[:2])[0] == ':' and rb[1] in ')]}': # end of tuple
-            if brackets and rb[-1] not in brackets or brackets == '' and (expr.parent is None or rb[-1] not in expr.parent.brackets):
-                raise ParseError(f"Unmatched right delimiter '{rb}'", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
-            if rb[0] == ':' and not isinstance(expr.parent, Tuple):  # if expr is not the last field of a Tuple, convert it to a tuple.
-                expr = Tuple.fromExpr(expr)
-            expr.inputStr = expr.inputStr[:pos + (isinstance(expr.parent, Tuple) and len(rb))]  # If within a Tuple, leave the closing bracket in the string to be processed later.
+        if (ch := ss[0]) == ',' or ch in ')]}' or (ch := ss[:2]) in [f'{ONE_TUPLE_INDICATOR}{ch}' for ch in ')]}']:  # last item in expression / tuple
+            if expr.parent is None: raise ParseError(f"Unexpected {"comma separator ','" if ch == ',' else f"delimiter '{ch}'"} outside a tuple. Please enclose tuples in parentheses '()'.", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + len(ch)))
+            expr.inputStr = expr.inputStr[:pos]
             validate(expr)
             return expr
+        elif ss[0] in '([{': # tuple or bracketed expression
+            tup = Tuple(inputStr=ss[1:], brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], parent=expr, parentOffset=pos)
+            pos += 1
+            tupStartPos = pos
+            while True:
+                exprStartPos = pos
+                childExpr = parse(s[pos:], startPos=pos, brackets='', parent=tup)
+                tup.tokens.append(childExpr)
+                tup.tokenPos.append((exprStartPos, exprStartPos + len(childExpr.inputStr)))
+                pos += len(childExpr.inputStr)
+                if pos >= len(s):
+                    expr.tokenPos.append((tupStartPos, pos))
+                    break
+                if s[pos] == ',':
+                    pos += 1
+                elif (rb := s[pos]) == tup.brackets[-1] or (rb := s[pos: pos + 2]) == f'{ONE_TUPLE_INDICATOR}{tup.brackets[-1]}':
+                    expr.tokenPos.append((tupStartPos, pos))
+                    if len(tup) == 1 and len(tup.tokens[0].tokens) == 0:  # Tuple contains 1 empty expression; remove it.
+                        tup.tokens, tup.tokenPos = [], []
+                    if len(rb) != 2 and len(tup) == 1:  # convert 1-tuples to Expressions unless they end with ':)'
+                        tup = tup.toExpr()
+                    pos += len(rb)
+                    break
+            expr.tokens.append(tup)
+
         elif m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', ss):   # Number. Cannot follow Number, spaceSeparator, or Var
             addToken(RealNumber(m.group(), fcf=True, epsilon=RealNumber(1, 10**20, fcf=False)), m)
         elif checkOpRegex():
@@ -87,14 +76,6 @@ def parse(s, startPos=0, brackets='', parent=None):
 
     validate(expr)
     return expr
-
-
-# def stripOuterExpressionFromTuple(expr):
-#     if len(expr.tokens) == 1 and isinstance(expr.tokens[0], Tuple):
-#         tup = Tuple()
-#         tup.__dict__.update(expr.__dict__)
-#         return tup
-#     return expr
 
 
 def validate(expr):
@@ -152,6 +133,7 @@ if __name__ == '__main__':
     def testTuple():
         # exp0 = parse('(3, 4) + (1, 2)')
         # exp1 = parse('5+(3+5,1,2-3)-9')
+        exp01 = parse('(1, 2, 3)')
         exp5 = parse('(a,(b,c),(d=3,f)) = (1,(2,3),(,5))')
         exp0 = parse('(1 + 2)')
         exp2 = parse('5  +  (   3 +   5, 1,,2 - 3  ) - 9')

@@ -6,22 +6,20 @@ from errors import ParseError, EvaluationError
 # ffg(7), f(g(3, 4)), (fg^2)(x), (f(fg)^2)(7)
 
 
-# TODO: Rewrite
-# - how functions handle memory. Functions should know the memory of their scope, but not mutate it.
-# - function should take in a tuple, rather than have a 'params' dict.
 class Function(Value):
 
     def __init__(self, name='<fn>', params=None, expr=None):
-        from expressions import Tuple
+        from tuples import Tuple
         from vars import WordToken
         self.name = name
         self.function = self.invoke
         self.funcList = [self]
         if expr is not None:
-            self.expression = expr
-            expr.tokens = expr.tokens[3:]
-            expr.inputStr = expr.inputStr[expr.tokenPos[3][0]:]
-            expr.tokenPos = [(a - expr.tokenPos[3][0], b - expr.tokenPos[3][0]) for (a, b) in expr.tokenPos[3:]]
+            self.expression = (cpy := expr.morphCopy())
+            cpy.brackets = ''
+            cpy.tokens = cpy.tokens[3:]
+            cpy.inputStr = cpy.inputStr[cpy.tokenPos[3][0]:]
+            cpy.tokenPos = [(a - cpy.tokenPos[3][0], b - cpy.tokenPos[3][0]) for (a, b) in cpy.tokenPos[3:]]
         if params is None: raise ParseError("Function parameter should be exactly one LTuple")
         self.params = params
         self.wordDict = {}  # wordDict is rebuilt when main memory changes.
@@ -42,7 +40,7 @@ class Function(Value):
     # - perform the evaluation
 
         if mem is None:  raise EvaluationError(f"No memory passed to function '{self.name}'")
-        from expressions import Tuple
+        from tuples import Tuple
         from memory import Memory
 
         if len(argTuple) > len(self.params): raise EvaluationError(f"Function '{self.name}' expects {len(self.params)} parameters but received {len(argTuple)}")

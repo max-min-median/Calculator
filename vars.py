@@ -12,6 +12,12 @@ class Value:
 
     def disp(self, fracMaxLength, finalPrecision):
         return str(self)
+    
+    def morphCopy(self, cls=None):  # makes a copy of the object, optionally changing its class
+        if cls is None: cls = type(self)
+        cpy = cls.__new__(cls)
+        cpy.__dict__.update(self.__dict__)
+        return cpy
 
     def value(self, *args, **kwargs):
         raise NotImplementedError(f'subclass {type(self)} has no implementation of value()')
@@ -87,10 +93,11 @@ class WordToken:
             # ': " + ", ".join(tmp) + f". (selecting '{tmp[0]}')")
         return splitList[0], varList[0]
 
-    def toLValue(self):
-        lVal = LValue(name=self.name)
-        lVal.__dict__.update(self.__dict__)
-        return lVal
+    def morphCopy(self, cls=None):  # makes a copy of the object, optionally changing its class
+        if cls is None: cls = type(self)
+        cpy = cls.__new__(cls)
+        cpy.__dict__.update(self.__dict__)
+        return cpy
 
     def toLFunc(self):
         from functions import LFunc
