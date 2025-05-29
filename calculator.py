@@ -13,6 +13,7 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
+# sin(  <-- gives error
 # - scrollable display window
 # - fix bug when input is too long
 

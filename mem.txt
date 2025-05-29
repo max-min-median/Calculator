@@ -51,8 +51,13 @@ norm(v) = sqrt(reduce(f(prev, x) = prev + x^2, v))
 stdDev(v) = sqrt(var(v))
 var(v) = sumSq = sum(map(square(x) = x^2, v)); mean = sum(v) / v$; sumSq / v$ - mean^2
 euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)
+vecAngle(u, v) = acos(dotProduct(u, v) / norm(u)norm(v))
+f(x) = x^2
+unitVec(v) = k = norm(v); map(f(x) = x/k, v)
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
-ans = 944163/12500000
+x = -2
+y = 32
+f(x) = x^2

@@ -416,6 +416,12 @@ regex = {
     r'(C)': combination,
 }
 
+# (precedenceWhenEntering, precedenceAfterEntering)
+# A recursive call is entered only when `precedenceWhenEntering > currentPrecedenceLevel`
+# E.g.:
+# - (11.1, 10.9)          -> Operator is right-associative, e.g. exponentiation 2^3^4
+# - (10, 10) or (10, 9.8) -> Operator is left-associative, e.g. addition, multiplication
+
 power = {
     functionInvocation: (10.1, 99),  # why did I choose such a low precedence for this?
     # functionInvocation: (13, 99),

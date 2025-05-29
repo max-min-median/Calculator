@@ -49,12 +49,9 @@ def parse(s, startPos=0, brackets='', parent=None):
                 tup.tokens.append(childExpr)
                 tup.tokenPos.append((exprStartPos, exprStartPos + len(childExpr.inputStr)))
                 pos += len(childExpr.inputStr)
-                if pos >= len(s):
-                    expr.tokenPos.append((tupStartPos, pos))
-                    break
-                if s[pos] == ',':
+                if s[pos:pos + 1] == ',':
                     pos += 1
-                elif (rb := s[pos]) == tup.brackets[-1] or (rb := s[pos: pos + 2]) == f'{ONE_TUPLE_INDICATOR}{tup.brackets[-1]}':
+                elif (rb := ' ') and pos >= len(s) or (rb := s[pos]) == tup.brackets[-1] or (rb := s[pos: pos + 2]) == f'{ONE_TUPLE_INDICATOR}{tup.brackets[-1]}':
                     expr.tokenPos.append((tupStartPos, pos))
                     if len(tup) == 1 and len(tup.tokens[0].tokens) == 0:  # Tuple contains 1 empty expression; remove it.
                         tup.tokens, tup.tokenPos = [], []
