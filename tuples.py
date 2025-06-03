@@ -102,6 +102,7 @@ class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
                 token.parent = self
                 checkExpr(token)
         else:  # if Expression, then make LTuple a parent of Expression
+            tupOrExpr = tupOrExpr.morphCopy()
             tupOrExpr.parent = self
             tupOrExpr.parentOffset = 0
             tupOrExpr.brackets = ''

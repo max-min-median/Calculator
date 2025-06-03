@@ -5,7 +5,10 @@ class Operator:
     
     def __str__(self):
         return self.name
-    
+
+    def __repr__(self):
+        return str(self)
+
     @property
     def power(self):  # binding power for determining precedence
         import op

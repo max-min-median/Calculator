@@ -198,8 +198,8 @@ def assignmentFn(L, R, mem=None):
     if mem is None: raise MemoryError('No Memory object passed to assignment operator')
     if not isinstance(L, LValue): raise EvaluationError('Can only assign to LValue')
     if isinstance(L, LTuple): return L.assign(R, mem=mem)
-    mem[L.name] = R
-    return mem[L.name]
+    mem.add(L.name, R)
+    return R
 
 def indexFn(tup, idx):
     from tuples import Tuple
@@ -223,8 +223,8 @@ def tupConcatFn(tup1, tup2):
     return result
 
 def knifeFn(dir):
-    from tuples import Tuple
     def check(L, R):
+        from tuples import Tuple
         if isinstance(L, RealNumber):
             if not L.isInt(): raise EvaluationError("Index must be an integer")
             if not isinstance(R, Tuple): raise EvaluationError(f"Knife operator '{dir}' expects a tuple and an integer")
@@ -499,7 +499,7 @@ power = {
     assignment: (2, 1.9),
     ternary_if: (2, 0.5),
     ternary_else: (0.1, 0.5),
-    semicolonSeparator: (1, 1.1),
+    semicolonSeparator: (0.01, 0.01),
     # comma_separator: (1, 1),
     None: (0, 0),
 }

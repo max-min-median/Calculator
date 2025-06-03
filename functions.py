@@ -1,29 +1,24 @@
-from vars import Value
+from vars import Value, LValue
 from errors import ParseError, EvaluationError
 
 # Functions must be followed by bracketed expressions, unlike Unary_Left_Operators.
 # Trig fns and sqrt are therefore treated as Unary_Left_Operators.
 # ffg(7), f(g(3, 4)), (fg^2)(x), (f(fg)^2)(7)
 
+# LAMBDAS
+# sum = x => y => z => x + y + z
+# sum(3): 'y => {x = 3}; z => x + y + z'
+# sum(3, 5): 'z => {x = 3; y = 5}; x + y + z'
 
 class Function(Value):
 
     def __init__(self, name='<fn>', params=None, expr=None):
-        from tuples import Tuple
-        from vars import WordToken
         self.name = name
         self.function = self.invoke
         self.funcList = [self]
-        if expr is not None:
-            self.expression = (cpy := expr.morphCopy())
-            cpy.brackets = ''
-            cpy.tokens = cpy.tokens[3:]
-            cpy.inputStr = cpy.inputStr[cpy.tokenPos[3][0]:]
-            cpy.tokenPos = [(a - cpy.tokenPos[3][0], b - cpy.tokenPos[3][0]) for (a, b) in cpy.tokenPos[3:]]
+        self.expression = expr
         if params is None: raise ParseError("Function parameter should be exactly one LTuple")
         self.params = params
-        self.wordDict = {}  # wordDict is rebuilt when main memory changes.
-        self.wordDictVer = -1
 
     def value(self, *args, **kwargs):
         return self
@@ -40,22 +35,13 @@ class Function(Value):
     # - perform the evaluation
 
         if mem is None:  raise EvaluationError(f"No memory passed to function '{self.name}'")
-        from tuples import Tuple
         from memory import Memory
-
         if len(argTuple) > len(self.params): raise EvaluationError(f"Function '{self.name}' expects {len(self.params)} parameters but received {len(argTuple)}")
-        if isinstance(mem, Memory):
-            if self.wordDictVer < mem._varsVersion:
-                self.wordDict = mem.update
-                self.wordDictVer = mem._varsVersion
-                self.expression.parsed = self.expression.parsedPos = None
-            thisInvocationDict = self.wordDict.copy()
-        else:
-            thisInvocationDict = mem.copy()
-        # store inputs into own copy of wordDict
-        self.params.assign(argTuple, thisInvocationDict)
+        self.expression.parsed = self.expression.parsedPos = None
+        closure = mem.copy()
+        self.params.assign(argTuple, closure)
         # evaluate the expression
-        return self.expression.value(mem=thisInvocationDict)
+        return self.expression.value(mem=closure)
 
     def __mul__(self, other):
         if not isinstance(other, Function): raise EvaluationError('Incorrect type for function composition')
@@ -78,3 +64,11 @@ class FuncComposition(Function):
         for fn in self.funcList[::-1]:
             res = fn.invoke(res, mem=mem)
         return res
+
+class LFunc(Function, LValue):
+    def __init__(self, wordtoken, params):
+        self.name = wordtoken.name
+        self.params = params
+    
+    def __str__(self):
+        return f"{self.name}{self.params}"

@@ -1,6 +1,6 @@
 from settings import Settings
 from vars import *
-from memory import Memory
+from memory import Memory, GlobalMemory
 from errors import *
 from parser import parse
 from number import *
@@ -14,6 +14,18 @@ from UI import *
 
 # TODO:
 # sin(  <-- gives error
+# fix function memory system (finally)
+# - minimal memory for functions
+
+# LAMBDAS AND CLOSURES
+# sum = x => y => z => x + y + z
+# sum(3): 'y => {x = 3; z => x + y + z}'
+# sum(3)(5): 'z => {x = 3; y = 5; x + y + z}'
+
+# f(x) = g(y) = h(z) = x + y + z
+# f(3): g(y) = {x = 3; h(z) = x + y + z}
+# f(3)(4): h(z) = {x = 3; y = 4; x + y + z}
+
 # - scrollable display window
 # - fix bug when input is too long
 
@@ -24,10 +36,9 @@ def main():
     settingsPath = basedir/'settings.txt'
     historyPath = basedir/'history.txt'
     st = Settings(settingsPath)
-    mainMem = Memory(memPath)
-    mainMem.trie = trie = Trie.fromCollection(mainMem.update)
+    Memory.globalMem = mainMem = GlobalMemory(memPath)
+    mainMem.trie = trie = Trie.fromCollection(mainMem)
     ui = UI(mainMem, st, historyPath)
-    currVersion = mainMem._varsVersion
 
     while True:
         try:
@@ -40,8 +51,11 @@ def main():
                 if len(ui.text["display"]) > 0: ui.addText("display")
                 ui.addText("display", ("User-defined Variables", UI.LIGHTBLUE_ON_BLACK))
                 ui.addText("display", ("──────────────────────", ))
-                for k in mainMem._vars:
-                    ui.addText("display", (k, UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f"{mainMem._vars[k].value()}", UI.LIGHTBLUE_ON_BLACK))
+                for k, v in mainMem.vars.items():
+                    if isinstance(v, Function) and k == v.name:
+                        ui.addText("display", (f"{v.value()}", UI.LIGHTBLUE_ON_BLACK))
+                    else:
+                        ui.addText("display", (k, UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f"{v.value()}", UI.LIGHTBLUE_ON_BLACK))
             elif m := re.match(r'^\s*del\s(.*)$', inp):
                 deleted = mainMem.delete(m.group(1))
                 if not deleted:
@@ -86,12 +100,10 @@ def main():
                 if expr is None: continue
                 val = expr.value(mainMem)
                 if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
-                mainMem['ans'] = val
                 if val is None: raise CalculatorError("Empty expression")
+                mainMem.add('ans', val)
                 ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
-            if mainMem._varsVersion != currVersion:
-                mainMem.save(memPath)
-                currVersion = mainMem._varsVersion
+            if mainMem.changed: mainMem.save(memPath)
         except CalculatorError as e:
             if len(e.args) > 1: ui.addText("display", (' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
             ui.addText("display", (f"{repr(e).split('(')[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))

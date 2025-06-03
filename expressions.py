@@ -3,7 +3,7 @@ from operators import *
 import op
 from vars import Value, Var, WordToken, LValue
 from errors import CalculatorError, ParseError, EvaluationError
-from functions import Function
+from functions import Function, LFunc
 
 st = Settings()
 dummy = Var('dummy')
@@ -47,7 +47,7 @@ class Expression(Value):
             while True:
                 token = self.parsed[index]
                 tokenPos = self.posOfElem(index)
-                if isinstance(token, WordToken):
+                if isinstance(token, WordToken) and not skipEval:
                     if self.parsed[index+1] == op.assignment:
                         self.parsed[index] = token.morphCopy(LValue)
                     elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
@@ -62,7 +62,7 @@ class Expression(Value):
                         self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]
                     continue
                 match L, token:
-                    case None, Value():
+                    case None, Value() | WordToken():
                         L = dummy if skipEval else token.value(mem=mem)
                         index += 1
                         continue
@@ -99,24 +99,42 @@ class Expression(Value):
                         if not skipEval: L = trueVal if isTrue else falseVal
                     case Postfix():
                         L = tryOperate(L)
+                    case op.assignment:
+                        if not isinstance(L, LValue) and not skipEval: raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(index - 1))
+                        oldIndex = index
+                        if isinstance(L, LFunc): 
+                            _dummy_, index = evaluate(power=token.power[1], index = index + 1, skipEval=True)
+                            expr = self.morphCopy()
+                            expr.brackets = ''
+                            expr.tokens = self.parsed[oldIndex + 1: index + 1]
+                            expr.tokenPos = self.parsedPos[oldIndex + 1: index + 1]
+                            expr.inputStr = expr.inputStr[expr.tokenPos[0][0]: expr.tokenPos[-1][1]]
+                            toAssign = Function(L.name, L.params, expr)
+                        elif isinstance(L, LValue):
+                            toAssign, index = evaluate(power=token.power[1], index = index + 1, skipEval=skipEval)
+                        else: toAssign = None
+                        L = tryOperate(L, toAssign, mem=mem)
+                        # f(x) = g(y) = x + y
+                        # handle LFunc and WordTokens differently.
+                        # - LFunc: save the following Expression without evaluating it.
+                        # - WordToken: save the VALUE of the following Expression.
                     case Infix():
                         from number import zero, one
-                        if token == op.assignment and not isinstance(L, LValue): raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(index - 1))
                         oldIndex = index
                         exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and op.eq.function(L, zero) == one or token == op.logicalOR and op.eq.function(L, zero) == zero)
-                        if token != op.assignment and isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
-                        L = tryOperate(L, exp, mem=mem) if token in (op.assignment, op.functionInvocation) else tryOperate(L, exp)
+                        if isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
+                        L = tryOperate(L, exp, mem=mem) if token == op.functionInvocation else tryOperate(L, exp)
                     case None:
                         return L, index - 1
                 index += 1
 
         # TODO - rewrite this part. Multiple assignment of functions should be possible, e.g. "f(x) = x^2; g(x) = 2x"
         # Line 52 is not entered because of this section, which assigns "f(x) = x + 1"
-        match self.tokens[:3]:  # create new function
-            case WordToken(), Expression(), op.assignment:
-                name = self.tokens[0].name
-                mem[name] = Function(name=self.tokens[0].name, params=self.tokens[1], expr=self)
-                return mem[name]
+        # match self.tokens[:3]:  # create new function
+        #     case WordToken(), Expression(), op.assignment:
+        #         name = self.tokens[0].name
+        #         mem[name] = Function(name=self.tokens[0].name, params=self.tokens[1], expr=self)
+        #         return mem[name]
 
         self.parsed = self.tokens + [None, None]
         self.parsedPos = self.tokenPos + [(9999, 9999), (9999, 9999)]

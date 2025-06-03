@@ -54,7 +54,10 @@ class WordToken:
 
     def __str__(self):
         return str(self.name)
-    
+
+    def __repr__(self):
+        return str(self.name)
+
     def splitWordToken(self, mem, nextToken):
         from operators import Prefix, Infix
         from number import Number, RealNumber
@@ -66,9 +69,10 @@ class WordToken:
             if s == '': return [[]], [[]]
             lst, varList = [], []
             for i in reversed(range(len(s))):
-                if (thisWord := s[:i+1]) in wordDict:
-                    if isinstance(wordDict[thisWord], Number): thisWord = Var(thisWord)
-                    else: thisWord = wordDict[thisWord]
+                val = mem.get(thisWord := s[:i+1])
+                if val is not None:
+                    if isinstance(val, Number): thisWord = Var(thisWord)
+                    else: thisWord = val
                     if onlyFuncsAllowed and not isinstance(thisWord, Function): continue
                     if i == len(s) - 1 and isinstance(thisWord, Prefix) and not isinstance(nextToken, Value): continue  # allow stuff like 'ksin3.0pi'
                 elif numAllowed and not onlyFuncsAllowed and s[:i+1].isdigit() and not s[i+1:i+2].isdigit():
@@ -80,7 +84,6 @@ class WordToken:
                 varList += [[thisWord] + spl for spl in splitRestVars]
             return lst, varList
         
-        wordDict = mem if isinstance(mem, dict) else mem.update
         splitList, varList = trySplit(self.name)
 
         if len(splitList) == 0: raise ParseError(f"Unable to parse '{self.name}'")
@@ -98,14 +101,3 @@ class WordToken:
         cpy = cls.__new__(cls)
         cpy.__dict__.update(self.__dict__)
         return cpy
-
-    def toLFunc(self):
-        from functions import LFunc
-        return LFunc(name=self.name)
-    
-    # @property
-    # def memory(self):
-    #     from memory import Memory
-    #     if self.funcMem is not None: wordDict = Memory.combine(self.userMem, self.funcMem)
-    #     else: wordDict = self.userMem.full
-    #     return wordDict
