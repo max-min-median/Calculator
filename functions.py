@@ -9,7 +9,7 @@ from errors import ParseError, EvaluationError
 # sum = x => y => z => x + y + z
 # sum(3): 'y => {x = 3}; z => x + y + z'
 # sum(3, 5): 'z => {x = 3; y = 5}; x + y + z'
-
+# TEST
 class Function(Value):
 
     def __init__(self, name='<fn>', params=None, expr=None):
