@@ -9,14 +9,16 @@ from errors import ParseError, EvaluationError
 # sum = x => y => z => x + y + z
 # sum(3): 'y => {x = 3}; z => x + y + z'
 # sum(3, 5): 'z => {x = 3; y = 5}; x + y + z'
-# TEST
+
 class Function(Value):
 
-    def __init__(self, name='<fn>', params=None, expr=None):
+    def __init__(self, name='<fn>', params=None, expr=None, closure=None):
         self.name = name
         self.function = self.invoke
         self.funcList = [self]
         self.expression = expr
+        if closure is None: raise MemoryError("Function must be created with a closure. Pass the global memory mainMem if it is defined in global scope.")
+        self.closure = closure
         if params is None: raise ParseError("Function parameter should be exactly one LTuple")
         self.params = params
 
@@ -29,13 +31,11 @@ class Function(Value):
         else:
             return self.name
 
-    def invoke(self, argTuple, mem=None):
+    def invoke(self, argTuple):
     # TODO: rewrite. Should perform the following:
     # - assign its input tuple to the paramsTuple (which writes to its memory)
     # - perform the evaluation
 
-        if mem is None:  raise EvaluationError(f"No memory passed to function '{self.name}'")
-        from memory import Memory
         if len(argTuple) > len(self.params): raise EvaluationError(f"Function '{self.name}' expects {len(self.params)} parameters but received {len(argTuple)}")
         self.expression.parsed = self.expression.parsedPos = None
         closure = mem.copy()

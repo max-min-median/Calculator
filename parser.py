@@ -93,27 +93,39 @@ def validate(expr):
             case [Infix() | Prefix() | None, Infix(), _any_]: raise ParseError(f"Unexpected operator '{str(lst[i])}'", expr.posOfElem(i-1))
             # Bin cannot precede Bin / UR / None
             case [_any_, Infix(), Infix() | Postfix()]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i))
-            case [_any_, Infix() | Prefix(), None]: raise ParseError(f"Missing operand for '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [_any_, Infix() | Prefix(), None]:
+                raise ParseError(f"Missing operand for '{str(lst[i])}'", expr.posOfElem(i-1))
             # L to R: Convert +/- to positive/negative if they come after Bin / UL
             case [None | Infix() | Prefix(), op.ambiguousPlus | op.ambiguousMinus, _any_]:
                 lst[i] = op.positive if lst[i] == op.ambiguousPlus else op.negative
-                continue
+                i -= 2
             # L to R: If not, convert +/- to addition/subtraction
-            case [_other_types_, op.ambiguousPlus | op.ambiguousMinus, _also_other_types_]:
+            case [_any_, op.ambiguousPlus | op.ambiguousMinus, _any2_]:
                 lst[i] = op.addition if lst[i] == op.ambiguousPlus else op.subtraction
-                continue
+                i -= 2
+            case [op.assignment | op.lambdaArrow, Expression(), _maybeSpaceSeparator_] if lst[i].brackets == '{}' and len(lst[i]) == 1 and isinstance(w := lst[i].tokens[0], Expression) and w.brackets == '{}':
+                from expressions import Closure
+                lst[i] = lst[i].morphCopy(Closure)
+                pass
+                # change Expression to a Closure
+                # if lst[i+1] is a space separator, remove it.
+                # put a op.closureCombiner (Infix) after the new Closure.
             # Numbers cannot follow space separators or evaluables
-            case [_any_, Value() | op.spaceSeparator, RealNumber()]: raise ParseError(f"Number '{str(lst[i+1])}' cannot follow space separator or an evaluable expression", expr.posOfElem(i))
-            # UR has to follow an evaluable or other UR
+            case [Value() | op.spaceSeparator, RealNumber(), _any_]: raise ParseError(f"Number '{str(lst[i])}' cannot follow space separator or an evaluable expression", expr.posOfElem(i-1))
+            # UR has to follow an evlauable or other UR
             case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Unexpected operator '{str(lst[i])}'", expr.posOfElem(i-1))
             # UL cannot precede Bin, UR or None
             # case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment", expr.posOfElem(i))
+            case [_any_, WordToken(), op.assignment]:
+                lst[i] = lst[i].morphCopy(LValue)
+                i -= 2
             case [_any_, Expression(), op.assignment]:
                 lst[i] = LTuple(lst[i])
                 if isinstance(lst[i - 1], WordToken):  # combine lst[i - 1] and lst[i] into an LFunc
                     from functions import LFunc
                     lst[i - 1: i + 1] = [LFunc(lst[i - 1], lst[i])]
                     posList[i - 1: i + 1] = [(posList[i - 1][0], posList[i][1] + 1)]
+                    i -= 1
                     continue
         i += 1
     expr.tokens, expr.tokenPos = lst[1:-1], posList[1:-1]
@@ -130,6 +142,12 @@ if __name__ == '__main__':
         print(exp1.value(mem=mem))
         print(exp2.value(mem=mem))
         print(exp3.value(mem=mem))
+        pass
+
+    def testClosures():
+        exp1 = parse('f(x) = {{y = 2}} x + y')
+        exp1 = parse('f(x) = {(y = 2)} x + y')
+        exp1 = parse('x => {{y = 3}} y => z')
         pass
 
     def testTuple():
@@ -188,4 +206,4 @@ if __name__ == '__main__':
         # result2 = exp7.value
         pass
 
-    testFunc()
+    testClosures()

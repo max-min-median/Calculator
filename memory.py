@@ -55,7 +55,7 @@ class Memory:
         seq = [Memory.topList, self.vars if self is not Memory.globalMem else {}, Memory.globalMem.vars, Memory.baseList]
         for dct in seq:
             if str in dct: return dct[str]
-    
+
     def add(self, str, val):
         if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.epsilon)
         self.vars[str] = val

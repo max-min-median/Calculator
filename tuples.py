@@ -91,9 +91,9 @@ class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
         def checkExpr(expr):
             if isinstance(expr.tokens[0], Tuple) and not isinstance(expr.tokens[0], LTuple):
                 expr.tokens[0] = LTuple(expr.tokens[0])
-            elif not isinstance(expr.tokens[0], WordToken) or len(expr.tokens) > 1 and expr.tokens[1] != op.assignment:
-                raise ParseError("Each parameter must be exactly one WordToken (with optional default expression)", expr.pos)
-            else:
+            elif not isinstance(expr.tokens[0], (WordToken, LValue)) or len(expr.tokens) > 1 and expr.tokens[1] != op.assignment:
+                raise ParseError("Each parameter must be exactly one WordToken or LValue (with optional default expression)", expr.pos)
+            elif isinstance(expr.tokens[0], WordToken):
                 expr.tokens[0] = expr.tokens[0].morphCopy(LValue)
 
         self.__dict__.update(tupOrExpr.__dict__)

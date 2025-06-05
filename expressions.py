@@ -2,7 +2,7 @@ from settings import Settings
 from operators import *
 import op
 from vars import Value, Var, WordToken, LValue
-from errors import CalculatorError, ParseError, EvaluationError
+from errors import CalculatorError, ParseError
 from functions import Function, LFunc
 
 st = Settings()
@@ -48,18 +48,13 @@ class Expression(Value):
                 token = self.parsed[index]
                 tokenPos = self.posOfElem(index)
                 if isinstance(token, WordToken) and not skipEval:
-                    if self.parsed[index+1] == op.assignment:
-                        self.parsed[index] = token.morphCopy(LValue)
-                    elif isinstance(self.parsed[index+1], Expression) and self.parsed[index+2] == op.assignment:  # make a function
-                        self.parsed[index] = token.toLFunc()  # why does this not exist
-                    else:
-                        try:
-                            splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
-                        except CalculatorError as e:
-                            raise (type(e))(e.args[0], self.posOfElem(index))
-                        self.parsed[index:index+1] = varList
-                        prev = 0
-                        self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]
+                    try:
+                        splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
+                    except CalculatorError as e:
+                        raise (type(e))(e.args[0], self.posOfElem(index))
+                    self.parsed[index:index+1] = varList
+                    prev = 0
+                    self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]
                     continue
                 match L, token:
                     case None, Value() | WordToken():
@@ -109,7 +104,7 @@ class Expression(Value):
                             expr.tokens = self.parsed[oldIndex + 1: index + 1]
                             expr.tokenPos = self.parsedPos[oldIndex + 1: index + 1]
                             expr.inputStr = expr.inputStr[expr.tokenPos[0][0]: expr.tokenPos[-1][1]]
-                            toAssign = Function(L.name, L.params, expr)
+                            toAssign = Function(L.name, L.params, expr, mem)
                         elif isinstance(L, LValue):
                             toAssign, index = evaluate(power=token.power[1], index = index + 1, skipEval=skipEval)
                         else: toAssign = None
@@ -154,3 +149,16 @@ class Expression(Value):
         return s
 
     def __repr__(self): return f"Expression('{str(self)}')"
+
+
+class Closure(Expression):
+    pass
+    # def __init__(self, expr):  # the outer expression, e.g. {{x = 3; y = 5}}
+    #     if len(expr) != 1 or expr.brackets != '{}': raise ParseError("Closure parse error! (This shouldn't happen; should be caught by parser.py)")
+    #     inner = expr.tokens[0]
+    #     if len(inner) != 1 or inner.brackets != '{}': raise ParseError("Closure parse error! (This shouldn't happen; should be caught by parser.py)")
+    #     self.__dict__.update(inner.__dict__)
+    #     # TODO - RESUME HERE YOU LAZY FK
+
+class ClosuredExpression(Expression):
+    pass

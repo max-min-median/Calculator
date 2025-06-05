@@ -54,10 +54,10 @@ euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thi
 vecAngle(u, v) = acos(dotProduct(u, v) / norm(u)norm(v))
 unitVec(v) = {k = norm(v); map(f(x) = x/k, v)}
 f(x) = e^x - 10x
-g(x) = f(y) = x + y
+g(x) = x^3
 add = g(x) = x^3
 h(x) = {a = x; (f() = a)()}
-ans = 5
+ans = -5
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931

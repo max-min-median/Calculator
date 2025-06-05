@@ -246,7 +246,6 @@ def knifeFn(dir):
 
     return knife
 
-
 def comparator(x, y):
     from tuples import Tuple
     match x, y:
@@ -259,8 +258,16 @@ def comparator(x, y):
                 return zero if len(x) == len(y) else -one if len(x) < len(y) else one
         case _, _: raise EvaluationError("Unable to compare operands")
 
+def lambdaArrowFn(L, R):
+    pass
+
+def closureCombinerFn(L, R):
+    pass
+
 
 assignment = Infix(' = ', assignmentFn)
+lambdaArrow = Infix(' => ', lambdaArrowFn)
+closureCombiner = Infix('-<closure>-', closureCombinerFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
 semicolonSeparator = Infix('; ', lambda x, y: y)
 ternary_if = Ternary(' ? ', lambda cond, trueVal, falseVal: trueVal if cond else falseVal)
@@ -363,6 +370,7 @@ regex = {
     r'\s*(<=)\s*': ltEq,
     r'\s*(==)\s*': eq,
     r'\s*(!=)\s*': neq,
+    r'\s*(=>)\s*': lambdaArrow,
     r'\s*(>)\s*': gt,
     r'\s*(<)\s*': lt,
     r'\s*(\?)\s*': ternary_if,
@@ -496,7 +504,9 @@ power = {
     neqAccurate: (5, 5),
     logicalAND: (4, 4),
     logicalOR: (3, 3),
+    closureCombiner: (2, 1.9),
     assignment: (2, 1.9),
+    lambdaArrow: (2, 1.9),
     ternary_if: (2, 0.5),
     ternary_else: (0.1, 0.5),
     semicolonSeparator: (0.01, 0.01),
