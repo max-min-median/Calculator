@@ -1,4 +1,4 @@
-from expressions import Expression
+from expressions import Expression, Closure
 from tuples import *
 from number import RealNumber
 from operators import *
@@ -10,16 +10,16 @@ import re
 
 # Performs surface-level parsing and validation. Does not attempt to split WordTokens or evaluate expressions.
 
-def parse(s, startPos=0, brackets='', parent=None):
+def parse(s, offset=0, brackets='', parent=None):
 
     def addToken(token, m=None):  # modifies 'pos'!
-        nonlocal pos
+        nonlocal i
         if token is not None:
             tokens.append(token)
-            posList.append(tuple(pos + x for x in m.span(1)))
+            posList.append(tuple(offset + i + x for x in m.span(1)))
             # debug and print(f'{tuple(startPos + x for x in posList[-1])}: {t}')
         if m is not None:
-            pos += m.span()[1]
+            i += m.span()[1]
 
     def checkOpRegex():
         for regex in op.regex:
@@ -28,48 +28,51 @@ def parse(s, startPos=0, brackets='', parent=None):
                 return True
         return False
     
-    expr = Expression(inputStr=s, brackets=brackets, parent=parent, parentOffset=startPos)
+    expr = Expression(inputStr=s, brackets=brackets, offset=offset)
     tokens, posList = expr.tokens, expr.tokenPos
-    offsetOfParent = 0 if parent is None else parent.offset
-    pos = 0
+    i = 0
     # print(f"Parsing '{s}', brackets: {brackets}, parent: {parent}")
-    while ss := s[pos:]:
+    while ss := s[i:]:
         if (ch := ss[0]) == ',' or ch in ')]}' or (ch := ss[:2]) in [f'{ONE_TUPLE_INDICATOR}{ch}' for ch in ')]}']:  # last item in expression / tuple
-            if expr.parent is None: raise ParseError(f"Unexpected {"comma separator ','" if ch == ',' else f"delimiter '{ch}'"} outside a tuple. Please enclose tuples in parentheses '()'.", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + len(ch)))
-            expr.inputStr = expr.inputStr[:pos]
+            if parent is None: raise ParseError(f"Unexpected {"comma separator ','" if ch == ',' else f"delimiter '{ch}'"} outside a tuple. Please enclose tuples in parentheses '()'.", (offset, offset + 1))
+            expr.inputStr = expr.inputStr[:i]
             validate(expr)
             return expr
         elif ss[0] in '([{': # tuple or bracketed expression
-            tup = Tuple(inputStr=ss[1:], brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], parent=expr, parentOffset=pos)
-            pos += 1
-            tupStartPos = pos
+            tup = Tuple(inputStr=ss[0:], brackets={'(': '()', '[': '[]', '{': '{}'}[ss[0]], offset=i)
+            i += 1
             while True:
-                exprStartPos = pos
-                childExpr = parse(s[pos:], startPos=pos, brackets='', parent=tup)
+                exprStartPos = i
+                childExpr = parse(s[i:], offset=offset + i, brackets='', parent=tup)
                 tup.tokens.append(childExpr)
                 tup.tokenPos.append((exprStartPos, exprStartPos + len(childExpr.inputStr)))
-                pos += len(childExpr.inputStr)
-                if s[pos:pos + 1] == ',':
-                    pos += 1
-                elif (rb := ' ') and pos >= len(s) or (rb := s[pos]) == tup.brackets[-1] or (rb := s[pos: pos + 2]) == f'{ONE_TUPLE_INDICATOR}{tup.brackets[-1]}':
-                    expr.tokenPos.append((tupStartPos, pos))
+                i += len(childExpr.inputStr)
+                if s[i:i+1] == ',':
+                    i += 1
+                elif (rb := ' ') and i >= len(s) or (rb := s[i]) == tup.brackets[-1] or (rb := s[i:i+2]) == f'{ONE_TUPLE_INDICATOR}{tup.brackets[-1]}':
+                    expr.tokenPos.append((tup.offset, i + len(rb)))
                     if len(tup) == 1 and len(tup.tokens[0].tokens) == 0:  # Tuple contains 1 empty expression; remove it.
                         tup.tokens, tup.tokenPos = [], []
                     if len(rb) != 2 and len(tup) == 1:  # convert 1-tuples to Expressions unless they end with ':)'
                         tup = tup.toExpr()
-                    pos += len(rb)
+                    i += len(rb)
                     break
             expr.tokens.append(tup)
 
-        elif m := re.match(r'(\d+(?:\.\d*)?|\.\d+)', ss):   # Number. Cannot follow Number, spaceSeparator, or Var
-            addToken(RealNumber(m.group(), fcf=True, epsilon=RealNumber(1, 10**20, fcf=False)), m)
+        elif m := re.match(r'(\d+(?:\.\d+)?|\.\d+)(?:[Ee](-?\d+))?', ss):   # Number. Cannot follow Number, spaceSeparator, or Var
+            num = RealNumber(m.groups()[0], fcf=True, epsilon=RealNumber(1, 10**20, fcf=False))
+            if exponent := m.groups()[1]:
+                exponent = int(exponent)
+                if exponent > 0: num *= RealNumber(10 ** exponent, fcf=False)
+                elif exponent < 0: num /= RealNumber(10 ** (-exponent), fcf=False)
+            addToken(num, m)
         elif checkOpRegex():
             continue
         elif m := re.match(r'([A-Za-z](?:\w*(?:\d(?!(?:[0-9.]))|[A-Za-z_](?![A-Za-z])))?)', ss):  # Word token (might be a concatenation of vars & possible func at the end) 
             # if tokens[-1] is not None and tokens[-1] is not Op.assignment: raise ParseError(f'Cannot assign to invalid l-value (pos {startPos + pos}). Did you mean "==" instead?')
             addToken(WordToken(m.group()), m)
         else:
-            raise ParseError(f"Unrecognized symbol '{ss[0]}'", (offsetOfParent + startPos + pos, offsetOfParent + startPos + pos + 1))
+            raise ParseError(f"Unrecognized symbol '{ss[0]}'", (offset + i, offset + i + 1))
 
     validate(expr)
     return expr
@@ -85,16 +88,15 @@ def validate(expr):
     while i < len(lst) - 1:
         # Transform / remove some types of tokens
         match lst[i-1:i+2]:
-            case [_any_, PrefixFunction(), None]: raise ParseError(f"Missing inputs for function '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [_any_, PrefixFunction(), None]: raise ParseError(f"Missing inputs for function '{str(lst[i])}'", posList[i])
             case [_any_, PrefixFunction(), _notExpression_] if not isinstance(_notExpression_, Expression):
-                if _notExpression_ is None: raise ParseError(f"'{str(lst[i])}' must be followed by bracketed expression.", expr.posOfElem(i))
-                else: raise ParseError(f"'{str(lst[i])}' must be followed by bracketed expression.", expr.posOfElem(i))
+                raise ParseError(f"'{str(lst[i])}' must be followed by bracketed expression.", posList[i])
             # Bin cannot follow Bin / UL / None
-            case [Infix() | Prefix() | None, Infix(), _any_]: raise ParseError(f"Unexpected operator '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [Infix() | Prefix() | None, Infix(), _any_]: raise ParseError(f"Unexpected operator '{str(lst[i])}'", posList[i])
             # Bin cannot precede Bin / UR / None
-            case [_any_, Infix(), Infix() | Postfix()]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", expr.posOfElem(i))
+            case [_any_, Infix(), Infix() | Postfix()]: raise ParseError(f"Invalid operand for '{str(lst[i])}'", posList[i])
             case [_any_, Infix() | Prefix(), None]:
-                raise ParseError(f"Missing operand for '{str(lst[i])}'", expr.posOfElem(i-1))
+                raise ParseError(f"Missing operand for '{str(lst[i])}'", posList[i])
             # L to R: Convert +/- to positive/negative if they come after Bin / UL
             case [None | Infix() | Prefix(), op.ambiguousPlus | op.ambiguousMinus, _any_]:
                 lst[i] = op.positive if lst[i] == op.ambiguousPlus else op.negative
@@ -103,28 +105,32 @@ def validate(expr):
             case [_any_, op.ambiguousPlus | op.ambiguousMinus, _any2_]:
                 lst[i] = op.addition if lst[i] == op.ambiguousPlus else op.subtraction
                 i -= 2
-            case [op.assignment | op.lambdaArrow, Expression(), _maybeSpaceSeparator_] if lst[i].brackets == '{}' and len(lst[i]) == 1 and isinstance(w := lst[i].tokens[0], Expression) and w.brackets == '{}':
-                from expressions import Closure
+            case [op.assignment | op.lambdaArrow, Expression(), _maybeSpaceSeparator_] if not isinstance(lst[i], Closure) and lst[i].brackets == '{}' and len(lst[i]) == 1 and isinstance(w := lst[i].tokens[0], Expression) and w.brackets == '{}':
                 lst[i] = lst[i].morphCopy(Closure)
-                pass
+                lst[i].tokenPos = lst[i].tokens[0].tokenPos
+                lst[i].tokens = lst[i].tokens[0].tokens
+                lst[i].brackets = '{{', '}}'
+                if lst[i + 1] == op.spaceSeparator:
+                    lst.pop(i + 1)
+                    posList.pop(i + 1)
                 # change Expression to a Closure
                 # if lst[i+1] is a space separator, remove it.
                 # put a op.closureCombiner (Infix) after the new Closure.
             # Numbers cannot follow space separators or evaluables
-            case [Value() | op.spaceSeparator, RealNumber(), _any_]: raise ParseError(f"Number '{str(lst[i])}' cannot follow space separator or an evaluable expression", expr.posOfElem(i-1))
+            case [Value() | op.spaceSeparator, RealNumber(), _any_]: raise ParseError(f"Number '{str(lst[i])}' cannot follow space separator or an evaluable expression", posList[i])
             # UR has to follow an evlauable or other UR
-            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Unexpected operator '{str(lst[i])}'", expr.posOfElem(i-1))
+            case [_operand_, Postfix(), _any_] if not isinstance(_operand_, (Value, WordToken, Postfix)): raise ParseError(f"Unexpected operator '{str(lst[i])}'", posList[i])
             # UL cannot precede Bin, UR or None
-            # case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment", expr.posOfElem(i))
-            case [_any_, WordToken(), op.assignment]:
+            # case [Infix() | Prefix() | Value(), LValue(), _any_] if lst[i-1] != op.assignment: raise ParseError(f"RValue cannot be the target of an assignment", posList[i])
+            case [_any_, WordToken(), op.assignment | op.lambdaArrow]:
                 lst[i] = lst[i].morphCopy(LValue)
                 i -= 2
-            case [_any_, Expression(), op.assignment]:
+            case [_any_, Expression(), op.assignment | op.lambdaArrow] if not isinstance(lst[i], LTuple):
                 lst[i] = LTuple(lst[i])
-                if isinstance(lst[i - 1], WordToken):  # combine lst[i - 1] and lst[i] into an LFunc
+                if lst[i + 1] == op.assignment and isinstance(lst[i - 1], WordToken):  # combine lst[i - 1] and lst[i] into an LFunc
                     from functions import LFunc
                     lst[i - 1: i + 1] = [LFunc(lst[i - 1], lst[i])]
-                    posList[i - 1: i + 1] = [(posList[i - 1][0], posList[i][1] + 1)]
+                    posList[i - 1: i + 1] = [(posList[i - 1][0], posList[i][1])]
                     i -= 1
                     continue
         i += 1
@@ -145,9 +151,9 @@ if __name__ == '__main__':
         pass
 
     def testClosures():
-        exp1 = parse('f(x) = {{y = 2}} x + y')
+        exp0 = parse('f(x) = {{y = 2}}(x + 5(3 + 4))(3y) + 5xy')
         exp1 = parse('f(x) = {(y = 2)} x + y')
-        exp1 = parse('x => {{y = 3}} y => z')
+        exp2 = parse('x => {{y = 3}} y => z')
         pass
 
     def testTuple():

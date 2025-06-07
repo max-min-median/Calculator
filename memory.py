@@ -71,30 +71,17 @@ class Memory:
     
     def __iter__(self): yield from self.vars
 
+    def __str__(self):
+        return "{{" + '; '.join([f"{k} = {v}" for k, v in self.vars.items()]) + "}}"
+
+    def strWithout(self, keyWithout):
+        return "{{" + '; '.join([f"{k} = {v}" for k, v in self.vars.items() if k != keyWithout]) + "}}"
+
+
     # def __getitem__(self, key): return self.get(key)
     # def __setitem__(self, key, value): self.add(key, value)
     # def __delitem__(self, key): self.delete(key)
     
-    # @staticmethod
-    # def combine(*dicts):  # combines Memory objects and/or dictionaries and produces a dict
-    #     # print("Combining dicts...")
-    #     combinedLst = [memOrDict.ownList if isinstance(memOrDict, Memory) else memOrDict for memOrDict in [Memory.baseList] + list(dicts) + [Memory.topList]]
-    #     tmp = {k: d[k] for d in combinedLst for k in d}
-    #     # Predefined constants (e.g. pi) may be overridden by user-defined variables.
-    #     # Predefined operators (sin, cos, tan) override user-defined variables.
-    #     tmp = {k: tmp[k] for k in sorted(tmp, key=lambda x: (-len(x), x))}
-    #     return tmp
-
-    # @property
-    # def update(self):
-    #     if self._fullVersion < self.varsVersion:
-    #         # print(f"Memory: updating full list...")
-    #         self._full = Memory.combine(self.vars)
-    #         self._fullVersion = self.varsVersion
-    #     return self._full
-
-    # @property
-    # def ownList(self): return self.vars
 
 class GlobalMemory(Memory):
 

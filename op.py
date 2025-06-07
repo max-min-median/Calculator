@@ -97,6 +97,8 @@ def sinFn(x):
     if isinstance(x, ComplexNumber):
         eiz = exp(imag_i * x)
         return (eiz - (one / eiz)) / two / imag_i
+    elif not isinstance(x, RealNumber):
+        raise EvaluationError('Invalid argument to trig function')
     if x < zero: return -sinFn(-x)
     x = x % (pi * two)
     if x > pi * three / two: return -sinFn(pi * two - x)
@@ -191,7 +193,7 @@ def imPartFn(x):
 def signumFn(x):
     if not isinstance(x, RealNumber):
         raise EvaluationError('sgn() expects a real number')
-    return one if x.sign == 1 else -one
+    return one if x.sign == 1 else -one if x.sign == -1 else zero
 
 def assignmentFn(L, R, mem=None):
     from tuples import LTuple
@@ -218,20 +220,18 @@ def tupConcatFn(tup1, tup2):
     from tuples import Tuple
     if not isinstance(tup1, Tuple) or not isinstance(tup2, Tuple):
         raise EvaluationError("Concatenation '<+>' expects tuples. End 1-tuples with ':)', e.g. '(3:)'")
-    result = Tuple(tup2.inputStr, tup2.brackets, tup2.parent, tup2.parentOffset)
+    result = tup2.morphCopy()
     result.tokens = tup1.tokens + tup2.tokens
     return result
 
 def knifeFn(dir):
     def check(L, R):
         from tuples import Tuple
-        if isinstance(L, RealNumber):
-            if not L.isInt(): raise EvaluationError("Index must be an integer")
-            if not isinstance(R, Tuple): raise EvaluationError(f"Knife operator '{dir}' expects a tuple and an integer")
-            L = int(L)
-            if L < 0 or L > len(R): raise EvaluationError(f"Unable to slice {L} element(s) from this tuple")
-            return True
-        return False
+        if not isinstance(L, RealNumber) or not isinstance(R, Tuple): return False
+        if not L.isInt(): raise EvaluationError("Knife operator expects an integer operand")
+        L = int(L)
+        if L < 0 or L > len(R): raise EvaluationError(f"Unable to slice {L} element(s) from this tuple")
+        return True
     
     def knife(L, R):
         if check(L, R):
@@ -240,7 +240,7 @@ def knifeFn(dir):
         elif check(R, L):
             tup = L.morphCopy()
             mid = len(tup) - int(R)
-        else: raise EvaluationError(f"Knife operator encountered an unexpected error: L = {L}, R = {R}")
+        else: raise EvaluationError(f"Knife operator '{dir}' expects a tuple and an integer")
         tup.tokens = tup.tokens[mid:] if dir == '</' else tup.tokens[:mid]
         return tup
 
@@ -258,16 +258,13 @@ def comparator(x, y):
                 return zero if len(x) == len(y) else -one if len(x) < len(y) else one
         case _, _: raise EvaluationError("Unable to compare operands")
 
-def lambdaArrowFn(L, R):
-    pass
-
-def closureCombinerFn(L, R):
-    pass
+def lambdaArrowFn(L, R, *args, **kwargs):
+    # The function will already be created in R
+    return R
 
 
 assignment = Infix(' = ', assignmentFn)
 lambdaArrow = Infix(' => ', lambdaArrowFn)
-closureCombiner = Infix('-<closure>-', closureCombinerFn)
 spaceSeparator = Infix(' ', lambda x, y: x * y)
 semicolonSeparator = Infix('; ', lambda x, y: y)
 ternary_if = Ternary(' ? ', lambda cond, trueVal, falseVal: trueVal if cond else falseVal)
@@ -306,7 +303,7 @@ eqAccurate = Infix(' === ', lambda x, y: one if x == y else zero)
 neqAccurate = Infix(' !== ', lambda x, y: one if x != y else zero)
 logicalAND = Infix(' && ', lambda x, y: x if x.fastContinuedFraction(epsilon=st.finalEpsilon) == zero else y)
 logicalOR = Infix(' || ', lambda x, y: x if x.fastContinuedFraction(epsilon=st.finalEpsilon) != zero else y)
-functionInvocation = Infix('<invoke>', lambda x, y, mem=None: x.invoke(y, mem=mem))
+functionInvocation = Infix('<invoke>', lambda x, y, mem=None: x.invoke(y))
 functionComposition = Infix('', lambda x, y: x.invoke(y))
 sin = Prefix('sin', sinFn)
 cos = Prefix('cos', cosFn)
@@ -504,7 +501,6 @@ power = {
     neqAccurate: (5, 5),
     logicalAND: (4, 4),
     logicalOR: (3, 3),
-    closureCombiner: (2, 1.9),
     assignment: (2, 1.9),
     lambdaArrow: (2, 1.9),
     ternary_if: (2, 0.5),

@@ -9,14 +9,13 @@ ONE_TUPLE_INDICATOR = ':'  # to be placed before the end bracket, e.g. (3:)
 
 class Tuple(Expression):  # Tuple elements are all Expressions
 
-    def __init__(self, inputStr=None, brackets='()', parent=None, parentOffset=0):
-        super().__init__(inputStr=inputStr, brackets=brackets, parent=parent, parentOffset=parentOffset)
+    def __init__(self, inputStr=None, brackets='()', offset=0):
+        super().__init__(inputStr=inputStr, brackets=brackets, offset=offset)
 
     @staticmethod
     def fromFirst(expr):  # begins the making of a Tuple from the first character after '('
-        tup = Tuple(inputStr=expr.inputStr, brackets=expr.brackets, parent=expr.parent, parentOffset=expr.parentOffset)
+        tup = Tuple(inputStr=expr.inputStr, brackets=expr.brackets, offset=expr.offset)
         tup.tokens = [expr]
-        expr.parent = tup
         return tup
 
     @staticmethod
@@ -33,7 +32,6 @@ class Tuple(Expression):  # Tuple elements are all Expressions
     def toExpr(self):
         if len(self.tokens) != 1: raise TypeError("Cannot convert Tuple to Expression because tuple does not have exactly 1 expression")
         expr = self.tokens[0]
-        expr.parent = self.parent
         expr.brackets = self.brackets
         return expr
 
@@ -75,7 +73,7 @@ class Tuple(Expression):  # Tuple elements are all Expressions
         return self.brackets[:1] + ', '.join([str(x) for x in self.tokens]) + (':' if len(self) == 1 else '') + self.brackets[1:]
 
     def value(self, mem=None):
-        tup = Tuple(inputStr=self.inputStr, brackets=self.brackets, parent=self.parent, parentOffset=self.parentOffset)
+        tup = Tuple(inputStr=self.inputStr, brackets=self.brackets, offset=self.offset)
         tup.tokenPos = self.tokenPos
         tup.tokens = [expr.value(mem=mem) for expr in self.tokens]
         return tup
@@ -97,14 +95,13 @@ class LTuple(LValue, Tuple):  # LTuple elements are all Expressions.
                 expr.tokens[0] = expr.tokens[0].morphCopy(LValue)
 
         self.__dict__.update(tupOrExpr.__dict__)
+        self.brackets = '()'
+        
         if isinstance(tupOrExpr, Tuple):
             for token in self.tokens:
-                token.parent = self
                 checkExpr(token)
-        else:  # if Expression, then make LTuple a parent of Expression
+        else:
             tupOrExpr = tupOrExpr.morphCopy()
-            tupOrExpr.parent = self
-            tupOrExpr.parentOffset = 0
             tupOrExpr.brackets = ''
             checkExpr(tupOrExpr)
             self.tokens = [tupOrExpr]

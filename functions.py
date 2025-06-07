@@ -19,6 +19,7 @@ class Function(Value):
         self.expression = expr
         if closure is None: raise MemoryError("Function must be created with a closure. Pass the global memory mainMem if it is defined in global scope.")
         self.closure = closure
+        if self.name is not None: self.closure.add(self.name, self)  # Add self to closure
         if params is None: raise ParseError("Function parameter should be exactly one LTuple")
         self.params = params
 
@@ -26,8 +27,15 @@ class Function(Value):
         return self
     
     def __str__(self):
+        closureStr = self.closure.strWithout(self.name) + ' ' if len(self.closure.vars) > (self.name is not None) else ''
+        if self.name is None:  # lambdas
+            if len(self.params) == 1 and len(self.params.tokens[0].tokens) == 1:
+                firstParam = str(self.params)[1:-1]
+            else:
+                firstParam = str(self.params)
+            return f"{firstParam} => {closureStr}{self.expression}"
         if hasattr(self, 'params') and hasattr(self, 'expression'):
-            return f"{self.name}{self.params} = {self.expression}"
+            return f"{self.name}{self.params} = {closureStr}{self.expression}"
         else:
             return self.name
 
@@ -38,7 +46,7 @@ class Function(Value):
 
         if len(argTuple) > len(self.params): raise EvaluationError(f"Function '{self.name}' expects {len(self.params)} parameters but received {len(argTuple)}")
         self.expression.parsed = self.expression.parsedPos = None
-        closure = mem.copy()
+        closure = self.closure.copy()
         self.params.assign(argTuple, closure)
         # evaluate the expression
         return self.expression.value(mem=closure)

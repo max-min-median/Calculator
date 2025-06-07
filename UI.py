@@ -10,7 +10,7 @@ from collections import deque
 import json
 
 system = platform.system()
-calcSplash = "MaxCalc v3.0.0-beta by max_min_median"
+calcSplash = "MaxCalc v3.5.0-beta by max_min_median"
 
 try:
     raise ImportError  # skips loading `keyboard` - for testing
@@ -318,7 +318,10 @@ class UI:
                 self.pos += 1
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
-                typed = [*(('^' if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or text[self.pos - 1] not in 'PC' and self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator))) else '') + chr(key))]
+                if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator)) and text[self.pos - 1] not in 'PC' and (text[self.pos - 1] not in 'Ee' or self.pos > 1 and not text[self.pos - 2].isdigit())):
+                    typed = ['^', chr(key)]
+                else:
+                    typed = [chr(key)]
                 
                 if self.selectionAnchor is not None:
                     selectL, selectR = sorted([self.selectionAnchor, self.pos])

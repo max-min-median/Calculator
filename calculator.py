@@ -13,18 +13,7 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
-# sin(  <-- gives error
-# fix function memory system (finally)
-# - minimal memory for functions
-
-# LAMBDAS AND CLOSURES
-# sum = x => y => z => x + y + z
-# sum(3): 'y => {x = 3; z => x + y + z}'
-# sum(3)(5): 'z => {x = 3; y = 5; x + y + z}'
-
-# f(x) = g(y) = h(z) = x + y + z
-# f(3): g(y) = {x = 3; h(z) = x + y + z}
-# f(3)(4): h(z) = {x = 3; y = 4; x + y + z}
+# fix scientific notation not being stored in mem.txt
 
 # - scrollable display window
 # - fix bug when input is too long
@@ -92,7 +81,7 @@ def main():
                 if (ans := mainMem.get('ans')) is None:
                     ui.addText("display", ("Variable '", ), ("ans", UI.LIGHTBLUE_ON_BLACK), ("' does not exist or has been deleted", ))
                 else:
-                    mainMem[m.group(1)] = ans
+                    mainMem.add(m.group(1), ans)
                     ui.trie.insert(m.group(1))
                     ui.addText("display", (f'{m.group(1)}', UI.LIGHTBLUE_ON_BLACK), (' = ', ), (f'{mainMem.get(m.group(1)).value()}', UI.LIGHTBLUE_ON_BLACK))
             else:

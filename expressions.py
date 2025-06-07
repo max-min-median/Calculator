@@ -10,29 +10,19 @@ dummy = Var('dummy')
 
 
 class Expression(Value):
-    def __init__(self, inputStr=None, brackets='', parent=None, parentOffset=0):
+
+    def __init__(self, inputStr=None, brackets='', offset=0):
         self.inputStr = inputStr  # only the part of the string relevant to this Expression.
         self.tokens = []
         self.tokenPos = []  # position of individual tokens within this Expression.
         self.parsed = None
         self.parsedPos = None
         self.brackets = brackets  # 2-char string, '()', '[]', '{}' or an empty string.
-        self.parent = parent  # parent object
-        self.parentOffset = parentOffset  # position of this Expression relative to parent
+        self.offset = offset  # position of this Expression relative to input string.
 
-    def posOfElem(self, i, tup=None):  # returns a tuple describing the position of the i-th element in the full string.
-        tupToUse = tup if tup is not None else self.parsedPos[i] if self.parsedPos is not None else self.tokenPos[i]
-        return tuple(self.offset + x for x in tupToUse)
-
-    @property
-    def offset(self):
-        return self.parentOffset + (0 if self.parent is None else self.parent.offset)
-
-    @property
-    def pos(self):
-        return (self.offset, self.offset + len(self.inputStr))
 
     def value(self, mem, debug=False):
+        from tuples import Tuple, LTuple
 
         def evaluate(power=0, index=0, skipEval=False):  # returns (Value, endIndex)
             def tryOperate(L, *args, **kwargs):
@@ -46,12 +36,12 @@ class Expression(Value):
             L = None
             while True:
                 token = self.parsed[index]
-                tokenPos = self.posOfElem(index)
+                tokenPos = self.parsedPos[index]
                 if isinstance(token, WordToken) and not skipEval:
                     try:
                         splitList, varList = token.splitWordToken(mem, self.parsed[index+1])
                     except CalculatorError as e:
-                        raise (type(e))(e.args[0], self.posOfElem(index))
+                        raise (type(e))(e.args[0], self.parsedPos[index])
                     self.parsed[index:index+1] = varList
                     prev = 0
                     self.parsedPos[index:index+1] = [(self.parsedPos[index][0] + prev, self.parsedPos[index][0] + (prev := prev + len(s))) for s in ([''] + splitList)[:-1]]
@@ -62,13 +52,12 @@ class Expression(Value):
                         index += 1
                         continue
                     # case None, Postfix() | Infix():
-                    #     raise ParseError(f"Unexpected operator '{token.name}'", self.posOfElem(index))
+                    #     raise ParseError(f"Unexpected operator '{token.name}'", self.parsedPos[index])
                     # non-Fn-Fn : Low
                     # non-Fn-Prefix : Low
                     # non-Fn-non-Fn : High
                     # Fn-Fn : High
                     case Function(), Expression():
-                        from tuples import Tuple
                         if not isinstance(token, Tuple): self.parsed[index] = Tuple.fromExpr(token)
                         token = op.functionInvocation
                     case Value(), Function() | Prefix() if not isinstance(L, Function):  # Fn-Fn = High, nonFn-Fn = Low
@@ -84,27 +73,44 @@ class Expression(Value):
                         L = tryOperate(L)
                     case Ternary():
                         if token == op.ternary_else:
-                            raise ParseError("Unexpected operator ' : '", self.posOfElem(index))
+                            raise ParseError("Unexpected operator ' : '", self.parsedPos[index])
                         from number import zero
                         ternaryIndex = index
                         if not skipEval: isTrue = op.eq.function(L, zero) == zero
                         trueVal, index = evaluate(power=token.power[1], index=index+1, skipEval=skipEval or not isTrue)
-                        if self.parsed[index + 1] != op.ternary_else: raise ParseError("Missing else clause ':' for ternary operator", self.posOfElem(ternaryIndex))
+                        if self.parsed[index + 1] != op.ternary_else: raise ParseError("Missing else clause ':' for ternary operator", self.parsedPos[ternaryIndex])
                         falseVal, index = evaluate(power=op.ternary_else.power[1], index=index+2, skipEval=skipEval or isTrue)
                         if not skipEval: L = trueVal if isTrue else falseVal
                     case Postfix():
                         L = tryOperate(L)
-                    case op.assignment:
-                        if not isinstance(L, LValue) and not skipEval: raise ParseError("Invalid LValue for assignment operator '='", self.posOfElem(index - 1))
+                    case op.assignment | op.lambdaArrow:
+                        if not isinstance(L, LValue) and not skipEval: raise ParseError(f"Invalid LValue for operator '{token.name}'", self.parsedPos[index - 1])
                         oldIndex = index
-                        if isinstance(L, LFunc): 
+                        if isinstance(L, LFunc) or token == op.lambdaArrow:  # create a function
+                            closure = mem.copy()
+                            if token == op.lambdaArrow:
+                                funcName = None
+                                if not isinstance(L, LTuple):  # build a tuple with this
+                                    innerExpr = self.morphCopy(Expression)
+                                    innerExpr.brackets = ''
+                                    innerExpr.tokens = self.parsed[index - 1: index]
+                                    innerExpr.tokenPos = self.parsedPos[index - 1: index]
+                                    funcParams = LTuple(innerExpr)
+                                else:
+                                    funcParams = L
+                            else:
+                                funcName, funcParams = L.name, L.params
+                            if isinstance(closureExpression := self.parsed[index + 1], Closure):
+                                oldIndex += 1
+                                index += 1
+                                closureExpression.value(closure)  # populate closure with the expressions inside it.
                             _dummy_, index = evaluate(power=token.power[1], index = index + 1, skipEval=True)
                             expr = self.morphCopy()
                             expr.brackets = ''
                             expr.tokens = self.parsed[oldIndex + 1: index + 1]
                             expr.tokenPos = self.parsedPos[oldIndex + 1: index + 1]
                             expr.inputStr = expr.inputStr[expr.tokenPos[0][0]: expr.tokenPos[-1][1]]
-                            toAssign = Function(L.name, L.params, expr, mem)
+                            toAssign = Function(funcName, funcParams, expr, closure)
                         elif isinstance(L, LValue):
                             toAssign, index = evaluate(power=token.power[1], index = index + 1, skipEval=skipEval)
                         else: toAssign = None
@@ -117,8 +123,8 @@ class Expression(Value):
                         from number import zero, one
                         oldIndex = index
                         exp, index = evaluate(power=token.power[1], index = index + 1 - (token in [op.implicitMult, op.implicitMultPrefix, op.functionInvocation]), skipEval = skipEval or token == op.logicalAND and op.eq.function(L, zero) == one or token == op.logicalOR and op.eq.function(L, zero) == zero)
-                        if isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.posOfElem(oldIndex))
-                        L = tryOperate(L, exp, mem=mem) if token == op.functionInvocation else tryOperate(L, exp)
+                        if isinstance(exp, LValue): raise ParseError(f"Invalid operation on LValue", self.parsedPos[oldIndex])
+                        L = tryOperate(L, exp)
                     case None:
                         return L, index - 1
                 index += 1
@@ -145,20 +151,19 @@ class Expression(Value):
         s = ''
         for token in self.tokens:
             s += token.fromString if hasattr(token, 'fromString') else str(token)
-        s = self.brackets[:1] + s + self.brackets[1:]
+        if self.brackets:
+            s = self.brackets[0] + s + self.brackets[-1]
         return s
 
     def __repr__(self): return f"Expression('{str(self)}')"
 
 
 class Closure(Expression):
-    pass
-    # def __init__(self, expr):  # the outer expression, e.g. {{x = 3; y = 5}}
-    #     if len(expr) != 1 or expr.brackets != '{}': raise ParseError("Closure parse error! (This shouldn't happen; should be caught by parser.py)")
-    #     inner = expr.tokens[0]
-    #     if len(inner) != 1 or inner.brackets != '{}': raise ParseError("Closure parse error! (This shouldn't happen; should be caught by parser.py)")
-    #     self.__dict__.update(inner.__dict__)
-    #     # TODO - RESUME HERE YOU LAZY FK
+
+    def __repr__(self): return f"Closure('{str(self)}')"
+
 
 class ClosuredExpression(Expression):
+    # wraps a Closure and an Expression into a single entity.
+    # intended to be assigned to a function by either op.assignment or op.lambdaArrow
     pass
