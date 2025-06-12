@@ -111,6 +111,14 @@ python calculator.py
 | `transpose(m, result = (), col = (), r = 0, c = 0) = result$ == (m @ 0)$ ? result : r == m$ ? transpose(m, result <+> (col:), (), 0, c + 1) : transpose(m, result, col <+> (m @ r @ c:), r + 1, c)` | matrix transposition |
 | `matrixMult(A, B) = B = transpose(B); (helper(result = (), row = (), r = 0, c = 0) = r == A$ ? result : c == B$ ? helper(result <+> (row:), (), r + 1, 0) : helper(result, row <+> (dotProduct(A @ r, B @ c):), r, c + 1))()` | matrix multiplication. Observe that `helper` is an IIFE. |
 
+Update (v3.5.0) Lambda functions are now available
+
+| Input | Notes |
+| ---------- | ----- |
+| `map = f => v => v$ ? (f(v @ 0):) <+> map(f)(1 </ v) : ()` | curried map function |
+| `reduce = f => (v, a = 0) = v$ ? reduce(f)(1 </ v, f(a, v @ 0)) : a` | curried reduce function |
+
+
 -----------
 ## List of currently supported math operators/functions:
 
@@ -128,3 +136,4 @@ python calculator.py
 | Ternary | `<expression> ? <trueVal> : <falseVal>` |
 | Complex | `abs`, `arg`, `conj`, `Re`, `Im` |
 | Tuple manipulaton | `<+>`, `@`, `$`, `</`, `/>` (see above) |
+| Lambda functions | `=>` |

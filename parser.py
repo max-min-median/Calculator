@@ -60,12 +60,10 @@ def parse(s, offset=0, brackets='', parent=None):
             expr.tokens.append(tup)
 
         elif m := re.match(r'(\d+(?:\.\d+)?|\.\d+)(?:[Ee](-?\d+))?', ss):   # Number. Cannot follow Number, spaceSeparator, or Var
-            num = RealNumber(m.groups()[0], fcf=True, epsilon=RealNumber(1, 10**20, fcf=False))
-            if exponent := m.groups()[1]:
-                exponent = int(exponent)
-                if exponent > 0: num *= RealNumber(10 ** exponent, fcf=False)
-                elif exponent < 0: num /= RealNumber(10 ** (-exponent), fcf=False)
-            addToken(num, m)
+            if (exponent := m.groups()[1]) is not None:
+                addToken(RealNumber.fromScientificNotation(m.groups()[0], m.groups()[1]), m)
+            else:
+                addToken(RealNumber(m.groups()[0], fcf=True, epsilon=st.epsilon), m)
         elif checkOpRegex():
             continue
         elif m := re.match(r'([A-Za-z](?:\w*(?:\d(?!(?:[0-9.]))|[A-Za-z_](?![A-Za-z])))?)', ss):  # Word token (might be a concatenation of vars & possible func at the end) 

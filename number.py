@@ -183,7 +183,16 @@ class RealNumber(Number):
         s = str(self)
         if len(s) <= fracMaxLength: return s + ' = ' + self.dec(dp=decimalPlaces)
         return self.dec(dp=decimalPlaces)
-
+    
+    @staticmethod
+    def fromScientificNotation(significand, exponent):  # params are strings
+        inputStr = significand + 'E' + exponent
+        num = RealNumber(significand, fcf=True, epsilon=st.epsilon)
+        exponent = int(exponent)
+        if exponent > 0: num *= RealNumber(10 ** exponent, fcf=False)
+        elif exponent < 0: num /= RealNumber(10 ** (-exponent), fcf=False)
+        num.fromString = inputStr
+        return num
 
 # 'Interning' some useful constants
 zero = RealNumber(0)

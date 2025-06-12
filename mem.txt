@@ -4,8 +4,6 @@ binompdf(n, p, x) = nCx p^x (1 - p)^(n - x)
 collatz(n) = n > 1 ? 1 + (n % 2 ? collatz(3n + 1) : collatz(n/2)) : 0
 cosAngle(a, b, c) = acos((b^2 + c^2 - a^2) / 2bc)
 cosRule(a, b, angle) = sqrt(a^2 + b^2 - 2ab cos angle)
-crossProduct((x1, y1, z1), (x2, y2, z2)) = (y1z2 - y2z1, z1x2 - z2x1, x1y2 - y1x2)
-dotProduct(u, v) = u$ ? u @ 0 conj(v @ 0) + dotProduct(1 </ u, 1 </ v) : 0
 grad(x, y) = (yx^2 + 2y)/(x^2 - 4)
 hero(a, b, c) = {s = (a + b + c) / 2; sqrt(s(s - a)(s - b)(s - c))}
 poisscdf(lambda, a, b) = poisspdf(lambda, a) + ((b > a) && poisscdf(lambda, a + 1, b))
@@ -22,7 +20,7 @@ parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = {c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c) : 10res + c}
-proj(u, v) = {k = 1/norm(v)^2 * dotProduct(u, v); map(f(x) = kx, v)}
+proj(u, v) = u.v / norm(u)^2 * v
 scalarMult(k, (a, b, c, d)) = (ka, kb, kc, kd)
 root(f, a, b, inc = (b - a)/1000, delta = delta, h = f(b)) = f(a) * h < 0 ? rootFind(f, a, b, delta, f(a), h) : a + inc < b ? root(f, a + inc, b, inc, delta) : ()
 rootFind(f, a, b, delta, l = f(a), h = f(b), m = f((a + b)/2)) = b - a <* delta ? (a + b)/2 : m * l <* 0 ? rootFind(f, a, (a + b)/2, delta, l, m) : rootFind(f, (a + b)/2, b, delta, m, h)
@@ -37,7 +35,6 @@ binCoeff(c, n, r, acc = 1) = r ? binCoeff(c, n, r - 1, acc * c * (n - r + 1) / r
 normpdf(x, mu = 0, sigma = 1) = 1/(sqrt(2pi) * sigma) e^(-1/2 ((x - mu)/sigma)^2)
 normcdf(a, b, mu = 0, sigma = 1) = integrate(normpdf, (a - mu)/sigma, (b - mu)/sigma)
 gym(a, b = 0, c = 0, d = 0, q = 0) = (45 + 2(45a + 25b + 10c + 5d + 2.5q)) lbToKg
-vecSum((a, b, c, d), (e, f, g, h)) = (a + e, b + f, c + g, d + h)
 sumOfRoots(a, b, c) = {q = quad(a, b, c); q @ 0 + q @ 1}
 map = f => v => v$ ? (f(v @ 0):) <+> map(f)(1 </ v) : ()
 reduce = f => (v, a = 0) => v$ ? reduce(f)(1 </ v, f(a, v @ 0)) : a
@@ -46,18 +43,21 @@ matrixMult(A, B) = {B = transpose(B); (helper(result = (), row = (), r = 0, c = 
 filter = pred => v => v$ ? (pred(v @ 0) ? (v @ 0:) : ()) <+> filter(pred)(1 </ v) : ()
 sum = (v, a = 0) => {{f = (x, y) => x + y}} v$ ? reduce(f)(1 </ v, f(a, v @ 0)) : a
 fibSequence(n, result = (1, 1)) = result$ >= n ? n /> result : fibSequence(n, result <+> (sum(result </ 2):))
-norm(v) = sqrt(reduce(f(prev, x) = prev + x^2, v))
+norm(v) = sqrt(v.v)
 stdDev(v) = sqrt(var(v))
 var(v) = {sumSq = sum(map(x => x^2)(v)); mean = sum(v) / v$; sumSq / v$ - mean^2}
 euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)
-vecAngle(u, v) = acos(dotProduct(u, v) / norm(u)norm(v))
-unitVec(v) = {k = norm(v); map(x => x/k, v)}
-sumThreeNums = x => y => z => x + y + z
-range(a, b = -9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, step = 1) = {b == -9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 && ((a, b) = (0, a)); h(x, y, st, res = ()) = sgn(y - x) == sgn(st) ? h(x + st, y, st, res <+> (x:)) : res; h(a, b, step)}
-ans = range(a, b = -9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, step = 1) = {b == -9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 && ((a, b) = (0, a)); h(x, y, st, res = ()) = sgn(y - x) == sgn(st) ? h(x + st, y, st, res <+> (x:)) : res; h(a, b, step)}
+vecAngle(u, v) = acos(u.v / (norm(u) norm(v)))
+unitVec(v) = v/norm(v)
+range(a, b = 9.87E99, step = sgn(b - a)) = {b == 9.87E99 && ((a, b) = (0, a)); h(x, y, st, res = ()) = sgn(y - x) == sgn(st) ? h(x + st, y, st, res <+> (x:)) : res; h(a, b, step)}
 collatzSeq = n => map(collatz)(range(1, n + 1))
+compose = g => f => x => f(g(x))
+repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1)
+grid = n => ch => repeat(n)(repeat(n)(ch))
+f = x => {{g = x => x^2; f = f => {{g = x => {{g = x => x^2}} x + 1}} x => f(g(x))}} f(g(x))
+rej(u, v) = v - proj(u, v)
+ans = x => {{g = x => x^2; f = f => {{g = x => {{g = x => x^2}} x + 1}} x => f(g(x))}} f(g(x))
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
-a = 5

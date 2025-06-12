@@ -13,8 +13,7 @@ from UI import *
 #         self.mem = Memory()
 
 # TODO:
-# fix scientific notation not being stored in mem.txt
-
+# - funcComposition is broken for lambdas
 # - scrollable display window
 # - fix bug when input is too long
 
@@ -25,8 +24,8 @@ def main():
     settingsPath = basedir/'settings.txt'
     historyPath = basedir/'history.txt'
     st = Settings(settingsPath)
-    Memory.globalMem = mainMem = GlobalMemory(memPath)
-    mainMem.trie = trie = Trie.fromCollection(mainMem)
+    mainMem = GlobalMemory(memPath)
+    mainMem.trie = trie = Trie.fromCollection(mainMem.fullDict())
     ui = UI(mainMem, st, historyPath)
 
     while True:
@@ -87,12 +86,12 @@ def main():
             else:
                 expr = parse(inp)
                 if expr is None: continue
+                mainMem.writeLock = True
                 val = expr.value(mainMem)
                 if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
-                if val is None: raise CalculatorError("Empty expression")
+                mainMem.writeLock = False
                 mainMem.add('ans', val)
                 ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
-            if mainMem.changed: mainMem.save(memPath)
         except CalculatorError as e:
             if len(e.args) > 1: ui.addText("display", (' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
             ui.addText("display", (f"{repr(e).split('(')[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))

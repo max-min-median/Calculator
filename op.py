@@ -8,6 +8,7 @@ from settings import Settings
 st = Settings()
 
 def factorialFn(n):
+    if not isinstance(n, RealNumber): raise EvaluationError("Invalid argument to factorial operator")
     if not n.isInt(): raise CalculatorError(f'Factorial operator expects an integer, not {str(n)}')
     n = int(n)
     if n in (0, 1): return one
@@ -18,7 +19,8 @@ def permutationFn(n, r):  # nPr
     return combinationFn(n, r, perm=True)
 
 def combinationFn(n, r, perm=False):  # nCr
-    if not n.isInt() or not r.isInt(): raise CalculatorError(f'Combination function expects integers')
+    if not isinstance(n, RealNumber) or not isinstance(r, RealNumber): raise EvaluationError("Invalid argument to combination operator")
+    if not n.isInt() or not r.isInt(): raise EvaluationError(f'Combination function expects integers')
     n, r = int(n), int(r)
     res = 1
     if n in (0, 1): return one
@@ -26,6 +28,9 @@ def combinationFn(n, r, perm=False):  # nCr
     return RealNumber(res)
 
 def exponentiationFn(a, b):
+    from tuples import Tuple
+    if isinstance(a, Tuple) or isinstance(b, Tuple):
+        raise EvaluationError("Cannot perform exponentiation with tuples/vectors")
     if isinstance(a, Function):
         if b.isInt(): return a ** b
         raise CalculatorError(f'Cannot raise a function ({str(a)}) to a fractional power {str(b)}')
@@ -66,6 +71,7 @@ def exp(x):
     return intPart * sum.fastContinuedFraction()
 
 def lnFn(x):
+    if not isinstance(x, Number): raise EvaluationError("Invalid argument to ln function")
     if x == zero: raise CalculatorError(f'ln 0 is undefined.')
     # ln(re^iθ) = ln r + iθ
     if isinstance(x, ComplexNumber): return ComplexNumber(lnFn(abs(x)), x.arg())
@@ -97,7 +103,7 @@ def sinFn(x):
     if isinstance(x, ComplexNumber):
         eiz = exp(imag_i * x)
         return (eiz - (one / eiz)) / two / imag_i
-    elif not isinstance(x, RealNumber):
+    elif not isinstance(x, Number):
         raise EvaluationError('Invalid argument to trig function')
     if x < zero: return -sinFn(-x)
     x = x % (pi * two)
@@ -140,6 +146,7 @@ def tanhFn(x):
     return ((e2x := exp(two * x)) - one) / (e2x + one)
 
 def arcsinFn(x):
+    if not isinstance(x, RealNumber): raise EvaluationError("Invalid argument to arcsin function")
     # https://en.wikipedia.org/wiki/List_of_mathematical_series
     if x.sign == -1: return -arcsinFn(-x)
     if x > one: raise CalculatorError('arcsin only accepts values from -1 to 1 inclusive')
@@ -155,11 +162,13 @@ def arcsinFn(x):
     return sum.fastContinuedFraction()
 
 def arccosFn(x):
+    if not isinstance(x, RealNumber): raise EvaluationError("Invalid argument to arccos function")
     if x.sign == -1: return pi - arccosFn(-x)
     if x > one: raise CalculatorError('arccos only accepts values from -1 to 1 inclusive')
     return pi / two - arcsinFn(x)
 
 def arctanFn(x):
+    if not isinstance(x, RealNumber): raise EvaluationError("Invalid argument to arctan function")
     if x.sign == -1: return -arctanFn(-x)
     if x > one: return pi / two - arctanFn(one / x)
     # https://en.wikipedia.org/wiki/Arctangent_series
@@ -262,6 +271,28 @@ def lambdaArrowFn(L, R, *args, **kwargs):
     # The function will already be created in R
     return R
 
+def vectorDotProductFn(L, R):
+    from tuples import Tuple
+    if not isinstance(L, Tuple) or not isinstance(R, Tuple):
+        raise EvaluationError("Dot product '.' expects tuples/vectors")
+    if len(L) != len(R) or len(L) == 0:
+        raise EvaluationError("'.' expects non-empty tuples/vectors of the same length")
+    result = None
+    for x, y in zip(L.tokens, R.tokens):
+        if result is None: result = x * y.conj()
+        else: result += x * y.conj()
+    return result
+
+def vectorCrossProductFn(L, R):
+    from tuples import Tuple
+    if not isinstance(L, Tuple) or not isinstance(R, Tuple):
+        raise EvaluationError("Cross product '><' expects tuples/vectors")
+    if len(L) != 3 or len(R) != 3:
+        raise EvaluationError("'><' expects tuples/vectors of dimension 3")
+    tup = L.morphCopy()
+    tup.tokens = [L.tokens[1] * R.tokens[2] - R.tokens[1] * L.tokens[2], L.tokens[2] * R.tokens[0] - R.tokens[2] * L.tokens[0], L.tokens[0] * R.tokens[1] - R.tokens[0] * L.tokens[1]]
+    return tup
+
 
 assignment = Infix(' = ', assignmentFn)
 lambdaArrow = Infix(' => ', lambdaArrowFn)
@@ -343,6 +374,9 @@ realPart = PrefixFunction('Re', realPartFn)
 imPart = PrefixFunction('Im', imPartFn)
 exponentiation = Infix('^', exponentiationFn)
 factorial = Postfix('!', factorialFn)
+vectorDotProduct = Infix('.', vectorDotProductFn)
+vectorCrossProduct = Infix('><', vectorCrossProductFn)
+
 
 regex = {
     r'\s*(<\/)\s*': leftKnife,
@@ -356,6 +390,7 @@ regex = {
     r'\s*(\^)\s*': exponentiation,
     r'\s*(\+)\s+': addition,
     r'\s*(\-)\s+': subtraction,
+    r'\s*(><)\s*': vectorCrossProduct,
     r'\s*(>==)\s*': gtEqAccurate,
     r'\s*(<==)\s*': ltEqAccurate,
     r'\s*(===)\s*': eqAccurate,
@@ -415,6 +450,7 @@ regex = {
     r'(sqrt)(?![A-Za-z_])': sqrt,
     r'(ln)(?![A-Za-z_])': ln,
     r'(lg)(?![A-Za-z_])': lg,
+    r'\s*(\.)\s*': vectorDotProduct,
     r'(\s)\s*': spaceSeparator,
     r'\s*(;)\s*': semicolonSeparator,
     r'(P)': permutation,
@@ -484,6 +520,8 @@ power = {
     multiplication: (8, 8),
     modulo: (8, 8),
     spaceSeparator: (8, 8),
+    vectorCrossProduct: (8, 8),
+    vectorDotProduct: (8, 8),
     subtraction: (7, 7),
     addition: (7, 7),
     tupConcat: (7, 7),

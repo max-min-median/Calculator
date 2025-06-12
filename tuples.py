@@ -1,5 +1,5 @@
 from settings import Settings
-from errors import ParseError
+from errors import ParseError, EvaluationError
 from expressions import Expression
 from vars import LValue, WordToken
 import op
@@ -44,25 +44,65 @@ class Tuple(Expression):  # Tuple elements are all Expressions
     def __iter__(self): return iter(self.tokens)
 
     def __gt__(self, other):
-        if not isinstance(other, Tuple): return NotImplemented
+        if not isinstance(other, Tuple): raise EvaluationError('Cannot compare tuple with non-tuple')
         for e1, e2 in zip(self, other):
             if e1 > e2: return True
         else:
             return len(e1) > len(e2)
 
     def __lt__(self, other):
-        if not isinstance(other, Tuple): return NotImplemented
+        if not isinstance(other, Tuple): raise EvaluationError('Cannot compare tuple with non-tuple')
         for e1, e2 in zip(self, other):
             if e1 < e2: return True
         else:
             return len(e1) < len(e2)
 
     def __eq__(self, other):
-        if not isinstance(other, Tuple): return NotImplemented
+        if not isinstance(other, Tuple): return False
         for e1, e2 in zip(self, other):
             if e1 != e2: return False
         else:
             return len(e1) == len(e2)
+
+    def __add__(self, other):
+        from number import Number
+        if isinstance(other, Number): raise EvaluationError('Cannot add tuple/vector with non-tuple/vector')
+        if not isinstance(other, Tuple): return NotImplemented
+        if len(self) != len(other): raise EvaluationError("Cannot add tuples of different lengths. Did you mean to concatenate '<+>'?")
+        tup = self.morphCopy()
+        for i, (t1, t2) in enumerate(zip(self.tokens, other.tokens)):
+            tup.tokens[i] = t1 + t2
+        return tup
+
+    def __radd__(self, other): return self + other
+
+    def __neg__(self):
+        tup = self.morphCopy()
+        for i, v in enumerate(self.tokens):
+            tup.tokens[i] = -v
+        return tup
+    
+    def __sub__(self, other): return self + (-other)
+    def __rsub__(self, other): return self + (-other)
+
+    def __mul__(self, other):
+        from number import Number
+        if isinstance(other, Tuple): raise EvaluationError("Cannot scalar multiply tuple/vector with non-Number. Did you mean dot product '.' or cross product '><' instead?")
+        if not isinstance(other, Number): return NotImplemented
+        tup = self.morphCopy()
+        tup.tokens = [t * other for t in self.tokens]
+        return tup
+
+    def __rmul__(self, other): return self * other
+
+    def __truediv__(self, other):
+        from number import Number, one
+        if isinstance(other, Tuple): raise EvaluationError("Cannot scalar multiply tuple/vector with non-Number. Did you mean dot product '.' or cross product '><' instead?")
+        if not isinstance(other, Number): return NotImplemented
+        return self * (one / other)
+    
+    def __rtruediv__(self, other):
+        raise EvaluationError("Cannot divide by tuple/vector")
 
     def __ne__(self, other): return not self == other
     def __ge__(self, other): return not self < other

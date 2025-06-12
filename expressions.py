@@ -129,20 +129,9 @@ class Expression(Value):
                         return L, index - 1
                 index += 1
 
-        # TODO - rewrite this part. Multiple assignment of functions should be possible, e.g. "f(x) = x^2; g(x) = 2x"
-        # Line 52 is not entered because of this section, which assigns "f(x) = x + 1"
-        # match self.tokens[:3]:  # create new function
-        #     case WordToken(), Expression(), op.assignment:
-        #         name = self.tokens[0].name
-        #         mem[name] = Function(name=self.tokens[0].name, params=self.tokens[1], expr=self)
-        #         return mem[name]
 
         self.parsed = self.tokens + [None, None]
         self.parsedPos = self.tokenPos + [(9999, 9999), (9999, 9999)]
-        # self.parsed = self.parsed or (self.tokens + [None, None])
-        # self.parsedPos = self.parsedPos or (self.tokenPos + [(9999, 9999), (9999, 9999)])
-        # if (result := evaluate()[0]) is None:
-        #     raise CalculatorError("Expression is empty", self.pos)
         return evaluate()[0]
 
 
@@ -161,9 +150,3 @@ class Expression(Value):
 class Closure(Expression):
 
     def __repr__(self): return f"Closure('{str(self)}')"
-
-
-class ClosuredExpression(Expression):
-    # wraps a Closure and an Expression into a single entity.
-    # intended to be assigned to a function by either op.assignment or op.lambdaArrow
-    pass
