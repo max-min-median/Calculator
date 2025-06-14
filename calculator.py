@@ -50,9 +50,9 @@ def main():
                     ui.addText("display", ('Variable(s) not found!', UI.LIGHTBLUE_ON_BLACK))
                 else:
                     ui.addText("display", ("Deleted: ", ))
-                    for var in deleted:
-                        ui.addText("display", (var, UI.LIGHTBLUE_ON_BLACK), (', ', ), startNewLine=False)
-                    ui.text["display"][-1].pop()
+                    for i, var in enumerate(deleted):
+                        if i > 0: ui.addText("display", (', ', ), startNewLine=False)
+                        ui.addText("display", (var, UI.LIGHTBLUE_ON_BLACK), startNewLine=False)
             elif m := re.match(r'^\s*(?:quit|exit)\s*$', inp):
                 break
             elif m := re.match(r'^\s*frac(?:\s+(\d+))?$', inp):

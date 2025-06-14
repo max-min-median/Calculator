@@ -31,6 +31,8 @@ class UI:
         {
             443: {"key": curses.KEY_LEFT, "modifiers": {"ctrl"}},
             444: {"key": curses.KEY_RIGHT, "modifiers": {"ctrl"}},
+            451: {"key": curses.KEY_PPAGE, "modifiers": {}},
+            457: {"key": curses.KEY_NPAGE, "modifiers": {}},
             480: {"key": curses.KEY_UP, "modifiers": {"ctrl"}},
             481: {"key": curses.KEY_DOWN, "modifiers": {"ctrl"}},
             391: {"key": curses.KEY_LEFT, "modifiers": {"shift"}},
@@ -89,6 +91,7 @@ class UI:
         self.mem = mem
         self.historyPath = historyPath
         self.st = settings
+        self.activeWin = "input"
         # Initialize curses
         self.stdscr = curses.initscr()
         curses.update_lines_cols()
@@ -115,6 +118,7 @@ class UI:
             UI.WHITE_ON_BLUE = UI.makeColorPair(-1, 21)
             UI.YELLOW_ON_BLUE = UI.makeColorPair(226, 21)
             UI.GREY_ON_BLUE = UI.makeColorPair(241, 21)
+            UI.BRIGHT_WHITE_ON_BLACK = UI.makeColorPair(15, -1)
             # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             UI.pairIdxToCode = {v: k for k, v in UI.pairCodeToIdx.items()}
 
@@ -154,6 +158,7 @@ class UI:
         curses.raw()
         self.stdscr.erase()
         self.subwins = {}
+        self.borderWins = {}
         self.ht, self.wd = self.stdscr.getmaxyx()
         while self.ht < 17 or self.wd < 44:
             self.stdscr.erase()
@@ -166,8 +171,9 @@ class UI:
             self.ht, self.wd = self.stdscr.getmaxyx()
 
         self.stdscr.addstr(0, (self.wd - len(calcSplash)) // 2, calcSplash, UI.LIGHTBLUE_ON_BLACK)
-        self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0).box()  # rows, cols, startrow, startcol
-        self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0).box()
+        self.borderWins["display"] = self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0)  # rows, cols, startrow, startcol
+        self.borderWins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 2, self.wd, self.ht * 3 // 4 + 2, 0)
+        self.drawBorders()
         self.stdscr.noutrefresh()
         self.subwins["display"] = self.stdscr.subwin(self.ht * 3 // 4 - 2, self.wd - 2, 2, 1)
         self.subwins["display"].leaveok(True)
@@ -178,7 +184,7 @@ class UI:
         self.subwins["input"] = self.stdscr.subwin(self.ht - self.ht * 3 // 4 - 4, self.wd - 2, self.ht * 3 // 4 + 3, 1)
         self.subwins["input"].leaveok(True)
         self.subwins["input"].scrollok(True)
-        self.redraw("display")
+        self.redraw("display", lastLine = len(self.text["display"]) - 1)
         self.redraw("input")
         self.redraw("status", limitWidth=True)
         return self.subwins
@@ -207,10 +213,10 @@ class UI:
         self.drawInput(text)
 
         while True:
-            if keys == []:
+            if keys == []:  # if there are no more keys left in the buffer, get more keys
                 key = self.stdscr.getch()
                 self.stdscr.nodelay(True)
-                while (k := self.stdscr.getch()) != -1: keys.append(k)
+                while (k := self.stdscr.getch()) != -1: keys.append(k)  # get all the keys at a go. Allows for e.g. simulating Ctrl-X as a sequence of Ctrl-C + Backspace
                 keys.reverse()
                 self.stdscr.nodelay(False)
             else:
@@ -263,7 +269,7 @@ class UI:
                 text[selectL:selectR] = []
                 self.pos = selectL
                 self.selectionAnchor = None
-            elif key == 127:
+            elif key == 127:  # Ctrl-Backspace = Ctrl-Shift-Left + Backspace
                 curses.ungetch(curses.KEY_BACKSPACE)
                 curses.ungetch(1001)
                 continue
@@ -288,6 +294,14 @@ class UI:
                     else:
                         text = [*self.inputHistory[historyIndex]]
                     self.pos = len(text)
+            elif key in (curses.KEY_PPAGE, curses.KEY_NPAGE):
+                if self.lastLine is None:
+                    self.lastLine = len(self.text["display"]) - 1
+                self.lastLine += [curses.KEY_PPAGE, None, curses.KEY_NPAGE].index(key) - 1
+                self.lastLine = max(0, min(self.lastLine, len(self.text["display"]) - 1))
+                self.redraw("display", lastLine=self.lastLine)
+                curses.doupdate()
+                continue
             elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_UP, curses.KEY_DOWN, curses.KEY_HOME, curses.KEY_END):
                 if shiftPressed:
                     if self.selectionAnchor is None: self.selectionAnchor = self.pos
@@ -412,19 +426,30 @@ class UI:
     def addText(self, windowName, *strAndAttrTuples, startNewLine=True):  # adds text to self.text. Does not redraw window.
         if startNewLine:
             self.text[windowName].append([])
-            if windowName == "display": self.displayHistory.append([])
+            if windowName == "display":
+                self.displayHistory.append([])
+                self.displayLineLength.append(None)
         self.text[windowName][-1] += strAndAttrTuples
-        if windowName == "display": self.displayHistory[-1] += [tup if len(tup) == 1 else (tup[0], UI.pairCodeToIdx[tup[1]]) for tup in strAndAttrTuples]
+        if windowName == "display":
+            self.displayHistory[-1] += [tup if len(tup) == 1 else (tup[0], UI.pairCodeToIdx[tup[1]]) for tup in strAndAttrTuples]
+            self.displayLineLength[-1] = sum(len(x[0]) for x in self.text[windowName][-1])
         return self
 
 
-    def redraw(self, windowName, limitWidth=False):  # does not call doupdate
+    def redraw(self, windowName, limitWidth=False, lastLine=None):  # does not call doupdate
         window = self.subwins[windowName]
         window.erase()
-        firstLine = True
-        for line in self.text[windowName]:
-            if not firstLine: window.addstr('\n')
-            firstLine = False
+        if lastLine is None:
+            self.lastLine = None
+            collection = self.text[windowName]
+        else:
+            collection = (self.text[windowName][n] for n in self.getRangeEndingAtIndex(lastLine))
+
+        for line in collection:
+            if window.getyx()[1] != 0: window.addstr('\n')
+            if len(line) == 0:
+                window.addstr(' ')
+                continue
             if limitWidth:
                 charsLeft = self.wd - 2
                 for item in line:  # either 1- or 2-tuple
@@ -438,6 +463,30 @@ class UI:
                     window.addstr(*item)
         window.noutrefresh()
 
+    def drawBorders(self):
+        for windowName in "display", "input":
+            self.drawBorder(windowName)
+
+    def drawBorder(self, windowName):
+        win = self.borderWins[windowName]
+        if self.activeWin == windowName:
+            win.attron(UI.BRIGHT_WHITE_ON_BLACK)
+            win.border(*((0, ) * 4 + (curses.ACS_LANTERN, ) * 4))
+        else:
+            win.attron(UI.GREY_ON_BLACK)
+            win.box()
+        win.noutrefresh()
+
+    def getRangeEndingAtIndex(self, n):
+        linesLeft, start = self.subwins["display"].getmaxyx()[0] - 1, n
+        while linesLeft >= 0 and start > 0:
+            if (chars := self.displayLineLength[start]) == 0:
+                linesLeft -= 1
+            else:
+                lines, rem = divmod(chars, self.wd)
+                linesLeft -= lines + (rem > 0)
+            start -= 1
+        return range(n, start, -1)[::-1]
 
     def saveHistory(self):
         with open(self.historyPath, "w") as f:
@@ -450,6 +499,7 @@ class UI:
                 line = f.readline()
                 self.displayHistory = deque(json.loads(line) if line else [], 150)
                 self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), 150)
+                self.displayLineLength = deque([sum(len(x[0]) for x in line) for line in self.text["display"]])
                 line = f.readline()
                 self.inputHistory = json.loads(line) if line else []
         except FileNotFoundError:

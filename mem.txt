@@ -20,7 +20,7 @@ parseBin(n) = radixToDecHelper(reverse(n), 2, 0)
 radixToDecHelper(n, radix, acc) = n ? radixToDecHelper(n // 10, radix, radix * acc + (n % 10 > 0)) : acc
 bin(n, bits = 32) = binHelper(n + (n < 0) * 2^bits, bits - 1, 0)
 binHelper(n, p, res) = {c = n // 2^p; p ? binHelper(n - c * 2^p, p - 1, 10res + c) : 10res + c}
-proj(u, v) = u.v / norm(u)^2 * v
+proj(u, v) = (u.v / norm(v)^2) v
 scalarMult(k, (a, b, c, d)) = (ka, kb, kc, kd)
 root(f, a, b, inc = (b - a)/1000, delta = delta, h = f(b)) = f(a) * h < 0 ? rootFind(f, a, b, delta, f(a), h) : a + inc < b ? root(f, a + inc, b, inc, delta) : ()
 rootFind(f, a, b, delta, l = f(a), h = f(b), m = f((a + b)/2)) = b - a <* delta ? (a + b)/2 : m * l <* 0 ? rootFind(f, a, (a + b)/2, delta, l, m) : rootFind(f, (a + b)/2, b, delta, m, h)
@@ -54,10 +54,17 @@ collatzSeq = n => map(collatz)(range(1, n + 1))
 compose = g => f => x => f(g(x))
 repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1)
 grid = n => ch => repeat(n)(repeat(n)(ch))
-f = x => {{g = x => x^2; f = f => {{g = x => {{g = x => x^2}} x + 1}} x => f(g(x))}} f(g(x))
 rej(u, v) = v - proj(u, v)
-ans = x => {{g = x => x^2; f = f => {{g = x => {{g = x => x^2}} x + 1}} x => f(g(x))}} f(g(x))
+d(x) = 1/(1/(0.05/2) - 1/x)
+ans = (0, -2, 0)
 delta = 1/100000000000000000000
 toDeg = 159121869262581/2777200530560
 deg = 89285273844/5115669363931
 lbToKg = 50000/110231
+x = 5706674932067741/1816491048114374
+a = (0, -2, 0)
+b = (-2, 0, -2)
+c = (1, 2, -3)
+A = (0, -2, 0)
+B = (-2, 0, -2)
+n = (-1, 4, 5)
