@@ -19,7 +19,8 @@ try:
 except ImportError:
     keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
 
-# - history
+DISPLAY_LINE_LIMIT = 150
+
 # - copy from display
 
 class UI:
@@ -149,7 +150,7 @@ class UI:
             else:
                 self.text["status"] = [[("No clipboard utility found. Install xclip or xsel."[:self.stdscr.getmaxyx()[1] - 3], UI.BRIGHT_RED_ON_BLACK)]]
                 self.statusDuration = 1
-                self.redraw("status", limitWidth=True)
+                self.redraw("status")
                 self.subwins["status"].refresh()
 
 
@@ -186,7 +187,7 @@ class UI:
         self.subwins["input"].scrollok(True)
         self.redraw("display", lastLine = len(self.text["display"]) - 1)
         self.redraw("input")
-        self.redraw("status", limitWidth=True)
+        self.redraw("status")
         return self.subwins
 
 
@@ -237,7 +238,7 @@ class UI:
 
             if self.statusDuration > 0:
                 self.statusDuration -= 1
-                if self.statusDuration == 0: self.redraw("status", limitWidth=True)
+                if self.statusDuration == 0: self.redraw("status")
 
             # Resolve tabbed state if the current key is not a tab or resize
             if tabbed is not False and key not in (9, 351, curses.KEY_RESIZE):
@@ -379,7 +380,7 @@ class UI:
                         spaces = '   '
                 else:
                     nearestWords = []
-                if self.statusDuration == 0: self.redraw("status", limitWidth=True)
+                if self.statusDuration == 0: self.redraw("status")
 
             if keys: continue
 
@@ -435,33 +436,70 @@ class UI:
             self.displayLineLength[-1] = sum(len(x[0]) for x in self.text[windowName][-1])
         return self
 
-
-    def redraw(self, windowName, limitWidth=False, lastLine=None):  # does not call doupdate
+    def redraw(self, windowName, lastLine=None):  # does not call doupdate
         window = self.subwins[windowName]
+        ht, wd = window.getmaxyx()
         window.erase()
-        if lastLine is None:
-            self.lastLine = None
-            collection = self.text[windowName]
+        if windowName == "display":
+            if lastLine is None or not hasattr(self, "lastLine"):
+                self.lastLine = len(self.text[windowName]) - 1
+            rng, totalLines = self.getRangeEndingAtIndex(self.lastLine)
+            collection = (self.text[windowName][n] for n in rng)
+            pad = curses.newpad(totalLines + 1, wd)
         else:
-            collection = (self.text[windowName][n] for n in self.getRangeEndingAtIndex(lastLine))
+            collection = self.text[windowName]
+            pad = curses.newpad(ht + 1, wd)
 
         for line in collection:
-            if window.getyx()[1] != 0: window.addstr('\n')
-            if len(line) == 0:
-                window.addstr(' ')
-                continue
-            if limitWidth:
-                charsLeft = self.wd - 2
-                for item in line:  # either 1- or 2-tuple
-                    if charsLeft == 0: break
-                    lst = [*item]
-                    charsLeft -= (lenToAdd := min(charsLeft, len(item[0])))
-                    lst[0] = lst[0][:lenToAdd]
-                    window.addstr(*lst)
-            else:
-                for item in line:
-                    window.addstr(*item)
-        window.noutrefresh()
+            if pad.getyx()[1] != 0: pad.addstr('\n')
+            if len(line) == 0: pad.addstr(' ')
+            for item in line:
+                pad.addstr(*item)
+
+        wy, wx = window.getbegyx()
+        py, px = pad.getyx()
+        if windowName == "display": pRow = py - (px == 0) - ht + 1
+        else: pRow = 0
+        pad.noutrefresh(pRow, 0, wy, wx, wy + ht - 1, wx + wd - 1)
+        # pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol;
+        # the p arguments refer to the upper left corner of the pad region to be displayed
+        # and the s arguments define a clipping box on the screen within which the pad region is to be displayed.
+
+    # def redraw(self, windowName, limitWidth=False, lastLine=None):  # does not call doupdate
+    #     window = self.subwins[windowName]
+    #     window.erase()
+    #     if windowName != "display":
+    #         collection = self.text[windowName]
+    #     else:
+    #         if lastLine is None or not hasattr(self, "lastLine"):
+    #             self.lastLine = len(self.text[windowName]) - 1
+    #         rng, totalLines = self.getRangeEndingAtIndex(self.lastLine)
+    #         collection = (self.text[windowName][n] for n in rng)
+
+    #     winHt, winWd = window.getmaxyx()
+
+    #     for line in collection:
+    #         if window.getyx()[1] != 0: window.addstr('\n')
+    #         if len(line) == 0:
+    #             window.addstr(' ')
+    #             continue
+    #         if limitWidth:
+    #             charsLeft = self.wd - 2
+    #             for item in line:  # either 1- or 2-tuple
+    #                 if charsLeft == 0: break
+    #                 lst = [*item]
+    #                 charsLeft -= (lenToAdd := min(charsLeft, len(item[0])))
+    #                 lst[0] = lst[0][:lenToAdd]
+    #                 window.addstr(*lst)
+    #         else:
+    #             for item in line:
+    #                 currY, currX = window.getyx()
+    #                 if len(item[0]) == (winHt - 1 - currY) * winWd + (winWd - currX):  # print reaches bottom-right char
+    #                     window.addstr(item[0][:-1], *item[1:])
+    #                     window.insch(item[0][-1], *item[1:])
+    #                 else:
+    #                     window.addstr(*item)
+    #     window.noutrefresh()
 
     def drawBorders(self):
         for windowName in "display", "input":
@@ -478,15 +516,17 @@ class UI:
         win.noutrefresh()
 
     def getRangeEndingAtIndex(self, n):
-        linesLeft, start = self.subwins["display"].getmaxyx()[0] - 1, n
-        while linesLeft >= 0 and start > 0:
-            if (chars := self.displayLineLength[start]) == 0:
+        ht, wd = self.subwins["display"].getmaxyx()
+        linesLeft, start = ht, n
+        while linesLeft >= 0 and start >= 0:
+            chars = self.displayLineLength[start]
+            if chars == 0:
                 linesLeft -= 1
             else:
-                lines, rem = divmod(chars, self.wd)
+                lines, rem = divmod(chars, wd)
                 linesLeft -= lines + (rem > 0)
             start -= 1
-        return range(n, start, -1)[::-1]
+        return range(n, start, -1)[::-1], ht - linesLeft
 
     def saveHistory(self):
         with open(self.historyPath, "w") as f:
@@ -497,9 +537,9 @@ class UI:
         try:
             with open(self.historyPath) as f:
                 line = f.readline()
-                self.displayHistory = deque(json.loads(line) if line else [], 150)
-                self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), 150)
-                self.displayLineLength = deque([sum(len(x[0]) for x in line) for line in self.text["display"]])
+                self.displayHistory = deque(json.loads(line) if line else [], DISPLAY_LINE_LIMIT)
+                self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), DISPLAY_LINE_LIMIT)
+                self.displayLineLength = deque([sum(len(x[0]) for x in line) for line in self.text["display"]], DISPLAY_LINE_LIMIT)
                 line = f.readline()
                 self.inputHistory = json.loads(line) if line else []
         except FileNotFoundError:
