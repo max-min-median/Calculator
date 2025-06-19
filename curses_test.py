@@ -9,7 +9,6 @@ def get_key(window):
 def main():
     # Initialize curses
     stdscr = curses.initscr()
-    sub = stdscr.subwin(15, 20, 0, 0)
 
     # Turn off echoing of keys, and enter cbreak mode,
     # where no buffering is performed on keyboard input
@@ -35,9 +34,8 @@ def main():
     k = None
     while k != 27:
         k = get_key(stdscr)
-        sub.addstr(f'key {str(k)} typed.\n')
-        sub.scrollok(True)
-        sub.refresh()
+        stdscr.addstr(f'key {str(k)} typed.\n')
+        stdscr.refresh()
 
 if __name__ == "__main__":
     main()

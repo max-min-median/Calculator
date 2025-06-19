@@ -10,7 +10,7 @@ from collections import deque
 import json
 
 system = platform.system()
-calcSplash = "MaxCalc v3.5.0-beta by max_min_median"
+calcSplash = "MaxCalc v3.6.0-beta by max_min_median"
 
 try:
     raise ImportError  # skips loading `keyboard` - for testing
@@ -93,6 +93,7 @@ class UI:
         self.historyPath = historyPath
         self.st = settings
         self.activeWin = "input"
+        self.displaySelection = None
         # Initialize curses
         self.stdscr = curses.initscr()
         curses.update_lines_cols()
@@ -136,7 +137,7 @@ class UI:
         if "status" in self.subwins:
             self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
             self.redraw("status")
-            curses.doupdate()
+            self.doupdate()
 
 
     def copyToClipboard(self, s):
@@ -160,6 +161,7 @@ class UI:
         self.stdscr.erase()
         self.subwins = {}
         self.borderWins = {}
+        prevWd = None if not hasattr(self, "wd") else self.wd
         self.ht, self.wd = self.stdscr.getmaxyx()
         while self.ht < 17 or self.wd < 44:
             self.stdscr.erase()
@@ -170,6 +172,9 @@ class UI:
             if key in (17, 27, 433): raise KeyboardInterrupt("Esc")
             curses.update_lines_cols()
             self.ht, self.wd = self.stdscr.getmaxyx()
+
+        if prevWd != self.wd:
+            self.displayLineLength = deque((sum(len(x[0]) for x in line) for line in self.text["display"]), DISPLAY_LINE_LIMIT)
 
         self.stdscr.addstr(0, (self.wd - len(calcSplash)) // 2, calcSplash, UI.LIGHTBLUE_ON_BLACK)
         self.borderWins["display"] = self.stdscr.subwin(self.ht * 3 // 4, self.wd, 1, 0)  # rows, cols, startrow, startcol
@@ -270,6 +275,12 @@ class UI:
                 text[selectL:selectR] = []
                 self.pos = selectL
                 self.selectionAnchor = None
+            elif key == 96:  # Backtick: switch window
+                self.activeWin = "input" if self.activeWin == "display" else "display"
+                if self.displaySelection is None:
+                    curses.ungetch(curses.KEY_UP)
+                self.drawBorders()
+                self.redraw("display", lastLine=self.lastLine)
             elif key == 127:  # Ctrl-Backspace = Ctrl-Shift-Left + Backspace
                 curses.ungetch(curses.KEY_BACKSPACE)
                 curses.ungetch(1001)
@@ -280,30 +291,36 @@ class UI:
             elif key == curses.KEY_DC and self.pos < len(text):
                 text[self.pos:self.pos+1] = []
             elif key in (curses.KEY_UP, curses.KEY_DOWN):
-                if key == curses.KEY_UP:
-                    if -historyIndex == len(self.inputHistory): continue
-                    if historyIndex == 0:
-                        currentText = text
-                    historyIndex -= 1
-                    text = [*self.inputHistory[historyIndex]]
-                    self.pos = len(text)
-                else:  # curses.KEY_DOWN
-                    if historyIndex == 0: continue
-                    historyIndex += 1
-                    if historyIndex == 0:
-                        text = currentText
-                    else:
+                if self.activeWin == "input":
+                    if key == curses.KEY_UP:
+                        if -historyIndex == len(self.inputHistory): continue
+                        if historyIndex == 0:
+                            currentText = text
+                        historyIndex -= 1
                         text = [*self.inputHistory[historyIndex]]
-                    self.pos = len(text)
+                        self.pos = len(text)
+                    else:  # curses.KEY_DOWN
+                        if historyIndex == 0: continue
+                        historyIndex += 1
+                        if historyIndex == 0:
+                            text = currentText
+                        else:
+                            text = [*self.inputHistory[historyIndex]]
+                        self.pos = len(text)
+                else:  # self.activeWin == "display"
+                    line = self.moveDisplaySelection(-1 if key == curses.KEY_UP else 1)
+                    while True:
+                        rng = self.getRangeEndingAtIndex(self.lastLine if self.lastLine is not None else len(self.text["display"]) - 1)[0]
+                        if line < rng[0] + 2 and rng[0] != 0: self.lastLine -= 1
+                        elif line > rng[-1] - 2 and rng[-1] != len(self.text["display"]) - 1: self.lastLine += 1
+                        else: break
+                    self.redraw("display", lastLine=self.lastLine)
             elif key in (curses.KEY_PPAGE, curses.KEY_NPAGE):
-                if self.lastLine is None:
-                    self.lastLine = len(self.text["display"]) - 1
-                self.lastLine += [curses.KEY_PPAGE, None, curses.KEY_NPAGE].index(key) - 1
-                self.lastLine = max(0, min(self.lastLine, len(self.text["display"]) - 1))
-                self.redraw("display", lastLine=self.lastLine)
-                curses.doupdate()
+                if self.scrollDisplay(-1 if key == curses.KEY_PPAGE else 1):
+                    self.redraw("display", lastLine=self.lastLine)
+                    self.doupdate()
                 continue
-            elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_UP, curses.KEY_DOWN, curses.KEY_HOME, curses.KEY_END):
+            elif key in (curses.KEY_LEFT, curses.KEY_RIGHT, curses.KEY_HOME, curses.KEY_END):
                 if shiftPressed:
                     if self.selectionAnchor is None: self.selectionAnchor = self.pos
                 else:
@@ -347,22 +364,38 @@ class UI:
                     text[self.pos:self.pos] = typed
                     self.pos += len(typed)
             elif key in (curses.KEY_ENTER, 10, 13, 459):  # Enter
-                result = ''.join(text).strip()
-                if result:
-                    self.subwins["status"].erase()
-                    self.subwins["status"].refresh()
-                    if len(self.text["display"]) > 0: self.addText("display")
-                    self.addText("display", *self.prompt, (result, ))
-                    if len(self.inputHistory) == 150: self.inputHistory.pop(0)
-                    self.inputHistory.append(result)
-                    return result
-                # ignore empty input
-                text = []
-                self.pos = 0
-            elif key == 3:
-                if self.selectionAnchor is not None:
-                    selectL, selectR = sorted([self.selectionAnchor, self.pos])
-                    self.copyToClipboard(''.join(text[selectL:selectR]))
+                if self.activeWin == "input":
+                    result = ''.join(text).strip()
+                    if result:
+                        self.subwins["status"].erase()
+                        self.subwins["status"].refresh()
+                        if len(self.text["display"]) > 0: self.addText("display")
+                        self.addText("display", *self.prompt, (result, ))
+                        if len(self.inputHistory) == 150: self.inputHistory.pop(0)
+                        self.displaySelection = None
+                        self.inputHistory.append(result)
+                        return result
+                    # ignore empty input
+                    text = []
+                    self.pos = 0
+                else:
+                    if self.displaySelection is None: continue
+                    toCopy = self.text["display"][self.displaySelection]
+                    hasPrompt = tuple(toCopy[:len(self.prompt)]) == self.prompt
+                    toCopy = ''.join(x[0] for x in (toCopy[len(self.prompt):] if hasPrompt else toCopy))
+                    curses.ungetch(96)  # switch back to input window
+                    for ch in toCopy[::-1]:
+                        curses.ungetch(ord(ch))
+            elif key == 3:  # Ctrl-C
+                if self.activeWin == "input":
+                    if self.selectionAnchor is not None:
+                        selectL, selectR = sorted([self.selectionAnchor, self.pos])
+                        self.copyToClipboard(''.join(text[selectL:selectR]))
+                elif self.displaySelection is not None:  # copy from display
+                    toCopy = self.text["display"][self.displaySelection]
+                    hasPrompt = tuple(toCopy[:len(self.prompt)]) == self.prompt
+                    toCopy = ''.join(x[0] for x in (toCopy[len(self.prompt):] if hasPrompt else toCopy))
+                    self.copyToClipboard(toCopy)
             elif key in (17, 27, 433):
                 raise KeyboardInterrupt("Esc")
             
@@ -415,13 +448,10 @@ class UI:
         # 7. print right part
         self.addText("input", (''.join(text[max(self.wordR, selectR, min(self.wordL, selectL)):]), ), startNewLine=False)
 
-        # self.useWin("display").addstr(f"{self.stdscr.getmaxyx()} Key: {key} Str: {''.join(text)}\n").refresh()
-        curses.curs_set(0)
         self.subwins["input"].move(*divmod(len(self.prompt) + (self.pos if tabbed is False else self.wordL + len(nearestWords[tabbed])), self.wd - 2))
         self.subwins["input"].cursyncup()
         self.redraw("input")
-        curses.curs_set(1)
-        curses.doupdate()
+        self.doupdate()
 
 
     def addText(self, windowName, *strAndAttrTuples, startNewLine=True):  # adds text to self.text. Does not redraw window.
@@ -437,24 +467,29 @@ class UI:
         return self
 
     def redraw(self, windowName, lastLine=None):  # does not call doupdate
-        window = self.subwins[windowName]
+        window, text = self.subwins[windowName], self.text[windowName]
         ht, wd = window.getmaxyx()
         window.erase()
         if windowName == "display":
             if lastLine is None or not hasattr(self, "lastLine"):
                 self.lastLine = len(self.text[windowName]) - 1
-            rng, totalLines = self.getRangeEndingAtIndex(self.lastLine)
-            collection = (self.text[windowName][n] for n in rng)
+            rnge, totalLines = self.getRangeEndingAtIndex(self.lastLine)
             pad = curses.newpad(totalLines + 1, wd)
         else:
-            collection = self.text[windowName]
+            rnge = range(len(text))
             pad = curses.newpad(ht + 1, wd)
 
-        for line in collection:
+        for i in rnge:
             if pad.getyx()[1] != 0: pad.addstr('\n')
-            if len(line) == 0: pad.addstr(' ')
-            for item in line:
-                pad.addstr(*item)
+            if len(text[i]) == 0: pad.addstr(' ')
+            if windowName == "display" and i == self.displaySelection:
+                promptEnd = tuple(text[i][:len(self.prompt)]) == self.prompt and len(self.prompt)
+                for j, item in enumerate(text[i]):
+                    pad.addstr(*(item if j < promptEnd else (item[0], UI.YELLOW_ON_BLUE)))
+            else:
+                for item in text[i]:
+                    pad.addstr(*item)
+
 
         wy, wx = window.getbegyx()
         py, px = pad.getyx()
@@ -465,41 +500,10 @@ class UI:
         # the p arguments refer to the upper left corner of the pad region to be displayed
         # and the s arguments define a clipping box on the screen within which the pad region is to be displayed.
 
-    # def redraw(self, windowName, limitWidth=False, lastLine=None):  # does not call doupdate
-    #     window = self.subwins[windowName]
-    #     window.erase()
-    #     if windowName != "display":
-    #         collection = self.text[windowName]
-    #     else:
-    #         if lastLine is None or not hasattr(self, "lastLine"):
-    #             self.lastLine = len(self.text[windowName]) - 1
-    #         rng, totalLines = self.getRangeEndingAtIndex(self.lastLine)
-    #         collection = (self.text[windowName][n] for n in rng)
-
-    #     winHt, winWd = window.getmaxyx()
-
-    #     for line in collection:
-    #         if window.getyx()[1] != 0: window.addstr('\n')
-    #         if len(line) == 0:
-    #             window.addstr(' ')
-    #             continue
-    #         if limitWidth:
-    #             charsLeft = self.wd - 2
-    #             for item in line:  # either 1- or 2-tuple
-    #                 if charsLeft == 0: break
-    #                 lst = [*item]
-    #                 charsLeft -= (lenToAdd := min(charsLeft, len(item[0])))
-    #                 lst[0] = lst[0][:lenToAdd]
-    #                 window.addstr(*lst)
-    #         else:
-    #             for item in line:
-    #                 currY, currX = window.getyx()
-    #                 if len(item[0]) == (winHt - 1 - currY) * winWd + (winWd - currX):  # print reaches bottom-right char
-    #                     window.addstr(item[0][:-1], *item[1:])
-    #                     window.insch(item[0][-1], *item[1:])
-    #                 else:
-    #                     window.addstr(*item)
-    #     window.noutrefresh()
+    def doupdate(self):
+        curses.curs_set(0)
+        curses.doupdate()
+        curses.curs_set(1)
 
     def drawBorders(self):
         for windowName in "display", "input":
@@ -518,7 +522,7 @@ class UI:
     def getRangeEndingAtIndex(self, n):
         ht, wd = self.subwins["display"].getmaxyx()
         linesLeft, start = ht, n
-        while linesLeft >= 0 and start >= 0:
+        while linesLeft > 0 and start >= 0:
             chars = self.displayLineLength[start]
             if chars == 0:
                 linesLeft -= 1
@@ -527,6 +531,27 @@ class UI:
                 linesLeft -= lines + (rem > 0)
             start -= 1
         return range(n, start, -1)[::-1], ht - linesLeft
+
+    def moveDisplaySelection(self, dir):
+        def selectionIsValid(i):
+            line = self.text["display"][i]
+            return line != [] and not any(len(t) == 2 and t[1] == UI.BRIGHT_RED_ON_BLACK for t in line)
+
+        last = len(self.text["display"]) - 1
+        curr = last if self.displaySelection is None else self.displaySelection + dir
+        while 0 <= curr <= last and not selectionIsValid(curr):
+            curr += dir
+        if 0 <= curr <= last: self.displaySelection = curr
+        return self.displaySelection
+
+    def scrollDisplay(self, dy):
+        if len(self.text["display"]) == 0 or dy == 0: return False  # cannot scroll if display is empty
+        if self.lastLine is None: self.lastLine = len(self.text["display"]) - 1
+        if self.lastLine + dy >= len(self.text["display"]): return False  # cannot scroll down if already at bottom
+        if dy < 0 and self.getRangeEndingAtIndex(self.lastLine)[0][0] == 0: return False  # cannot scroll up if top line already in view
+        dir = dy // abs(dy)
+        self.lastLine += dir
+        return dir + self.scrollDisplay(dy - dir)
 
     def saveHistory(self):
         with open(self.historyPath, "w") as f:
@@ -538,7 +563,7 @@ class UI:
             with open(self.historyPath) as f:
                 line = f.readline()
                 self.displayHistory = deque(json.loads(line) if line else [], DISPLAY_LINE_LIMIT)
-                self.text["display"] = deque(([tup if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), DISPLAY_LINE_LIMIT)
+                self.text["display"] = deque(([tuple(tup) if len(tup) == 1 else (tup[0], UI.pairIdxToCode[tup[1]]) for tup in line] for line in self.displayHistory), DISPLAY_LINE_LIMIT)
                 self.displayLineLength = deque([sum(len(x[0]) for x in line) for line in self.text["display"]], DISPLAY_LINE_LIMIT)
                 line = f.readline()
                 self.inputHistory = json.loads(line) if line else []

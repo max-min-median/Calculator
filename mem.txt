@@ -47,7 +47,7 @@ norm(v) = sqrt(v.v)
 stdDev(v) = sqrt(var(v))
 var(v) = {sumSq = sum(map(x => x^2)(v)); mean = sum(v) / v$; sumSq / v$ - mean^2}
 euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)
-vecAngle(u, v) = acos(u.v / (norm(u) norm(v)))
+vecAngle(u, v) = acos(u.v / norm(u)norm(v))
 unitVec(v) = v/norm(v)
 range(a, b = 9.87E99, step = sgn(b - a)) = {b == 9.87E99 && ((a, b) = (0, a)); h(x, y, st, res = ()) = sgn(y - x) == sgn(st) ? h(x + st, y, st, res <+> (x:)) : res; h(a, b, step)}
 collatzSeq = n => map(collatz)(range(1, n + 1))
@@ -55,9 +55,10 @@ compose = g => f => x => f(g(x))
 repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1)
 grid = n => ch => repeat(n)(repeat(n)(ch))
 rej(u, v) = v - proj(u, v)
-d(x) = 1/(1/(0.05/2) - 1/x)
-ans = 1751663/250000
+graph(f) = map(x => (x, f(x)))
+f(t) = 2t^3/3 - 13t^2/2 + 15t
+ans = 37
 delta = 1/100000000000000000000
-toDeg = 159121869262581/2777200530560
-deg = 89285273844/5115669363931
+toDeg = 134029745180/2339260349
+deg = 372357439/21334509725
 lbToKg = 50000/110231
