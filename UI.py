@@ -1,5 +1,4 @@
 import curses
-from curses.textpad import rectangle
 import os
 import platform
 import subprocess
@@ -11,13 +10,6 @@ import json
 
 system = platform.system()
 calcSplash = "MaxCalc v3.6.0-beta by max_min_median"
-
-try:
-    raise ImportError  # skips loading `keyboard` - for testing
-    import keyboard
-    keyboard.is_pressed(29)  # start up `keyboard` listener
-except ImportError:
-    keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
 
 DISPLAY_LINE_LIMIT = 150
 
@@ -84,14 +76,13 @@ class UI:
         return cls._instance
 
 
-    def initialize(self, mem, settings, historyPath):
+    def initialize(self, mem, historyPath):
         
         if hasattr(self, 'initialized'): return
         else: self.initialized = True
-
+        self.setupKeyboard()
         self.mem = mem
         self.historyPath = historyPath
-        self.st = settings
         self.activeWin = "input"
         self.displaySelection = None
         # Initialize curses
@@ -138,6 +129,18 @@ class UI:
             self.addText("status", ("Hello :) Type 'help' for a quick guide!", UI.GREEN_ON_BLACK))
             self.redraw("status")
             self.doupdate()
+
+    def setupKeyboard(self):
+        from settings import Settings
+        st = Settings()
+        try:
+            if not st.get("keyboard"): raise ImportError
+            # raise ImportError  # skips loading `keyboard` - for testing
+            import keyboard
+            self.keyboard = keyboard
+            self.keyboard.is_pressed(29)  # start up `keyboard` listener
+        except ImportError:
+            self.keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
 
 
     def copyToClipboard(self, s):
@@ -229,11 +232,11 @@ class UI:
                 key = keys.pop()
 
             if (keyCombo := UI.keymap[system].get(key, None)): key = keyCombo["key"]
-            shiftPressed = keyCombo is not None and "shift" in keyCombo["modifiers"] or keyboard.is_pressed(42) or keyboard.is_pressed(54)
-            ctrlPressed = keyCombo is not None and "ctrl" in keyCombo["modifiers"] or keyboard.is_pressed(29)
+            shiftPressed = keyCombo is not None and "shift" in keyCombo["modifiers"] or self.keyboard.is_pressed(42) or self.keyboard.is_pressed(54)
+            ctrlPressed = keyCombo is not None and "ctrl" in keyCombo["modifiers"] or self.keyboard.is_pressed(29)
 
-            if key == 55 and (shiftPressed or keyboard.is_pressed(71)): key = curses.KEY_HOME
-            elif key == 49 and (shiftPressed or keyboard.is_pressed(79)): key = curses.KEY_END
+            if key == 55 and (shiftPressed or self.keyboard.is_pressed(71)): key = curses.KEY_HOME
+            elif key == 49 and (shiftPressed or self.keyboard.is_pressed(79)): key = curses.KEY_END
 
             # Handle window resizing
             if key == curses.KEY_RESIZE:

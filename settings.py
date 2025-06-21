@@ -20,18 +20,20 @@ class Settings:
         self._version = 0
 
     def set(self, key, value):
-        if key not in self._settings: raise SettingsError("key '{key}' not found in settings")
+        # if key not in self._settings: raise SettingsError(f"key '{key}' not found in settings")
         self._settings[key] = value
         from number import RealNumber
         if key == 'working_precision':
             self.epsilon = RealNumber(1, 10 ** value, fcf=False)
         elif key == 'final_precision':
             self.finalEpsilon = RealNumber(1, 10 * 10 ** value, fcf=False)
-        
+        elif key == 'keyboard':
+            from UI import UI
+            UI().setupKeyboard()
         with open(self._filename, "w") as f:
             f.write(json.dumps(self._settings))
 
     def get(self, key):
         if key not in self._settings:
-            raise SettingsError("key '{key}' not found in settings")
+            raise SettingsError(f"key '{key}' not found in settings")
         return self._settings[key]

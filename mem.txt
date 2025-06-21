@@ -56,9 +56,10 @@ repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1)
 grid = n => ch => repeat(n)(repeat(n)(ch))
 rej(u, v) = v - proj(u, v)
 graph(f) = map(x => (x, f(x)))
-f(t) = 2t^3/3 - 13t^2/2 + 15t
-ans = 37
+helper(ch, i = 0) = {{repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1); n = 5}} i == n ? () : (ch:) <+> helper(ch, i + 1)
+ans = g => f => x => f(g(x))
 delta = 1/100000000000000000000
 toDeg = 134029745180/2339260349
 deg = 372357439/21334509725
 lbToKg = 50000/110231
+p = 401/10000

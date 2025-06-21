@@ -26,7 +26,7 @@ def main():
     st = Settings(settingsPath)
     mainMem = GlobalMemory(memPath)
     mainMem.trie = trie = Trie.fromCollection(mainMem.fullDict())
-    ui = UI(mainMem, st, historyPath)
+    ui = UI(mainMem, historyPath)
 
     while True:
         try:
