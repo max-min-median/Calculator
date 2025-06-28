@@ -21,6 +21,7 @@ python calculator.py
 | `prec N` | set working precision to `10^(-N)`, i.e. `N` decimal places |
 | `disp N` | set final display precision to `N` decimal places |
 | `frac N` | set length limit for fractions to be displayed |
+| `keyboard \| kb [on/off]` | enables / disables keyboard module for detection of Ctrl / Shift |
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
 
