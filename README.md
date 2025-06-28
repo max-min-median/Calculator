@@ -25,6 +25,13 @@ python calculator.py
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
 
+## Editing
+
+Common text-editor functionality is available, i.e.
+- Holding `Ctrl` enables word-jump,
+- Holding `Shift` enables selection.
+- Backtick \` switches the active window. While the display window is active, use `up` and `down` to select, then `Enter` to paste into the input window.
+
 | Hotkeys | Description |
 | ------- | ----------- |
 | `Shift + <Arrow>` | Text selection |
