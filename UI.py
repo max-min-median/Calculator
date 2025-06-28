@@ -142,7 +142,6 @@ class UI:
         except ImportError:
             self.keyboard = type('DummyKeyboard', (), {'is_pressed': lambda self, *args: None})()
 
-
     def copyToClipboard(self, s):
         if system == "Windows": subprocess.run("clip", input=s.encode("utf-8"), check=True)
         elif system == "Darwin": subprocess.run("pbcopy", input=s.encode("utf-8"), check=True)

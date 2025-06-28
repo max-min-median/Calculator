@@ -57,9 +57,14 @@ grid = n => ch => repeat(n)(repeat(n)(ch))
 rej(u, v) = v - proj(u, v)
 graph(f) = map(x => (x, f(x)))
 helper(ch, i = 0) = {{repeat(n) = helper(ch, i = 0) = i == n ? () : (ch:) <+> helper(ch, i + 1); n = 5}} i == n ? () : (ch:) <+> helper(ch, i + 1)
-ans = g => f => x => f(g(x))
+f(t) = 6000/(1 + 5999e^-0.5t)
+u(r) = r == 1 ? 2 : sqrt(9/2 + 1/u(r - 1))
+g(n) = summation(f, 1, n)
+h(n) = 11/20 - (n + 2)/5^(n + 1) - 3/20 (1/5)^n
+ans = euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)
 delta = 1/100000000000000000000
 toDeg = 134029745180/2339260349
 deg = 372357439/21334509725
 lbToKg = 50000/110231
-p = 401/10000
+x = 3
+y = -1

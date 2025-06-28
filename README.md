@@ -21,8 +21,16 @@ python calculator.py
 | `prec N` | set working precision to `10^(-N)`, i.e. `N` decimal places |
 | `disp N` | set final display precision to `N` decimal places |
 | `frac N` | set length limit for fractions to be displayed |
+| `keyboard \| kb [on/off]` | enables / disables keyboard module for detection of Ctrl / Shift |
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
+
+## Editing
+
+Common text-editor functionality is available, i.e.
+- Holding `Ctrl` enables word-jump,
+- Holding `Shift` enables selection.
+- Backtick \` switches the active window. While the display window is active, use `up` and `down` to select, then `Enter` to paste into the input window.
 
 | Hotkeys | Description |
 | ------- | ----------- |
@@ -110,14 +118,16 @@ python calculator.py
 | `dotProduct(u, v) = u$ ? u @ 0 conj(v @ 0) + dotProduct(1 </ u, 1 </ v) : 0` | improved vector dot-product (any dimension) |
 | `transpose(m, result = (), col = (), r = 0, c = 0) = result$ == (m @ 0)$ ? result : r == m$ ? transpose(m, result <+> (col:), (), 0, c + 1) : transpose(m, result, col <+> (m @ r @ c:), r + 1, c)` | matrix transposition |
 | `matrixMult(A, B) = B = transpose(B); (helper(result = (), row = (), r = 0, c = 0) = r == A$ ? result : c == B$ ? helper(result <+> (row:), (), r + 1, 0) : helper(result, row <+> (dotProduct(A @ r, B @ c):), r, c + 1))()` | matrix multiplication. Observe that `helper` is an IIFE. |
+| `euler(grad, (x, y), endX, stepSize, thisGrad = grad(x, y), thisRow = ((x, y, thisGrad):)) = x >= endX ? thisRow : thisRow <+> euler(grad, (x + stepSize, y + thisGrad * stepSize), endX, stepSize)` | Euler's method |
 
 Update (v3.5.0) Lambda functions are now available
 
 | Input | Notes |
 | ---------- | ----- |
+| `square = x => x^2` | another way to define a square function |
+| `(x => x^2)(5)` | immediately invoked square function |
 | `map = f => v => v$ ? (f(v @ 0):) <+> map(f)(1 </ v) : ()` | curried map function |
 | `reduce = f => (v, a = 0) = v$ ? reduce(f)(1 </ v, f(a, v @ 0)) : a` | curried reduce function |
-
 
 -----------
 ## List of currently supported math operators/functions:
@@ -136,4 +146,5 @@ Update (v3.5.0) Lambda functions are now available
 | Ternary | `<expression> ? <trueVal> : <falseVal>` |
 | Complex | `abs`, `arg`, `conj`, `Re`, `Im` |
 | Tuple manipulaton | `<+>`, `@`, `$`, `</`, `/>` (see above) |
+| Vector dot and cross product | `.`, `><` |
 | Lambda functions | `=>` |
