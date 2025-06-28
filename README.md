@@ -21,7 +21,7 @@ python calculator.py
 | `prec N` | set working precision to `10^(-N)`, i.e. `N` decimal places |
 | `disp N` | set final display precision to `N` decimal places |
 | `frac N` | set length limit for fractions to be displayed |
-| `keyboard \| kb [on/off]` | enables / disables keyboard module for detection of Ctrl / Shift |
+| `keyboard \| kb [on/off]` | enables / disables keyboard module for detection of `Ctrl` / `Shift` |
 | `debug [on/off]` | debug mode shows calculation steps |
 | `sto[re] \| = \| -> <varName>` | store previous calculation into 'varName' |
 
@@ -114,6 +114,8 @@ Common text-editor functionality is available, i.e.
 | Input | Notes |
 | ---------- | ----- |
 | `map(f, v) = v$ ? (f(v @ 0):) <+> map(f, 1 </ v) : ()` | map function |
+| `map(x => x^2)` | a function which squares all elements in a list |
+| `map(x => x^2)(range(5))` | `[0, 1, 4, 9, 16]` |
 | `reduce(f, v, a) = v$ ? reduce(f, 1 </ v, f(a, v @ 0)) : a` | reduce function |
 | `dotProduct(u, v) = u$ ? u @ 0 conj(v @ 0) + dotProduct(1 </ u, 1 </ v) : 0` | improved vector dot-product (any dimension) |
 | `transpose(m, result = (), col = (), r = 0, c = 0) = result$ == (m @ 0)$ ? result : r == m$ ? transpose(m, result <+> (col:), (), 0, c + 1) : transpose(m, result, col <+> (m @ r @ c:), r + 1, c)` | matrix transposition |
