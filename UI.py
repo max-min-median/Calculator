@@ -115,7 +115,6 @@ class UI:
             # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
             UI.pairIdxToCode = {v: k for k, v in UI.pairCodeToIdx.items()}
 
-        self.quickExponents = True
         # self.mem = memory
         self.statusDuration = 0
         # (prompt := "♦> ")  # →⇨►▶▷<◇▶❯›♦»•∙▷◇❯➤❯♦>∙
@@ -209,6 +208,9 @@ class UI:
 
 
     def getInput(self, trie: Trie=None):
+        if not hasattr(self, 'st'):
+            from settings import Settings
+            self.st = Settings()
         if trie is not None: self.trie = trie
         text = []
         keys = []
@@ -352,7 +354,7 @@ class UI:
                 self.pos += 1
             elif 32 <= key <= 126:  # usual alphanumeric + symbols
                 # quickExponents
-                if 48 <= key <= 57 and self.quickExponents and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator)) and text[self.pos - 1] not in 'PC' and (text[self.pos - 1] not in 'Ee' or self.pos > 1 and not text[self.pos - 2].isdigit())):
+                if 48 <= key <= 57 and self.st.get("quick_exponents") and self.pos > 0 and (text[self.pos - 1] in ')]}' or self.wordR == self.pos and not isinstance(self.mem.get(self.currWord), (Operator)) and text[self.pos - 1] not in 'PC' and (text[self.pos - 1] not in 'Ee' or self.pos > 1 and not text[self.pos - 2].isdigit())):
                     typed = ['^', chr(key)]
                 else:
                     typed = [chr(key)]

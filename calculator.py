@@ -75,6 +75,11 @@ def main():
                 if flag is not None: st.set("keyboard", flag)
                 else: ui.addText("display", ("Usage: ", ), ("keyboard [on/off] (allows use of keyboard module)", UI.LIGHTBLUE_ON_BLACK))
                 ui.addText("display", ("keyboard", UI.LIGHTBLUE_ON_BLACK), (" -> ", ), (f"{st.get('keyboard')}", UI.LIGHTBLUE_ON_BLACK))
+            elif m := re.match(r'^\s*(?:quick_exp(?:onents)?)(?:\s+(\w+))?$', inp):
+                flag = {'on':True, 'off':False}.get(m.group(1) if m.group(1) is None else m.group(1).lower(), None)
+                if flag is not None: st.set("quick_exponents", flag)
+                else: ui.addText("display", ("Usage: ", ), ("quick_exp[onents] [on/off]", UI.LIGHTBLUE_ON_BLACK))
+                ui.addText("display", ("quick_exponents", UI.LIGHTBLUE_ON_BLACK), (" -> ", ), (f"{st.get('quick_exponents')}", UI.LIGHTBLUE_ON_BLACK))
             elif inp.strip() == '':
                 continue
             elif m := re.match(r'^\s*(?:=|sto(?:re)? |->)\s*([A-Za-z]\w*)\s*$', inp):
@@ -90,9 +95,9 @@ def main():
                 mainMem.writeLock = True
                 val = expr.value(mainMem)
                 if isinstance(val, Number): val = val.fastContinuedFraction(epsilon=st.finalEpsilon)
+                ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
                 mainMem.writeLock = False
                 mainMem.add('ans', val)
-                ui.addText("display", (val.disp(st.get('frac_max_length'), st.get('final_precision')), UI.BRIGHT_GREEN_ON_BLACK))
         except CalculatorError as e:
             if len(e.args) > 1: ui.addText("display", (' ' * (len(ui.prompt) + (span := e.args[1])[0] - 1) + '↗' + '‾' * (span[1] - span[0]), UI.BRIGHT_RED_ON_BLACK))
             ui.addText("display", (f"{repr(e).split('(')[0]}: {e.args[0]}", UI.BRIGHT_RED_ON_BLACK))

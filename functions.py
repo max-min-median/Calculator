@@ -67,11 +67,14 @@ class FuncComposition(Function):
         self.funcList = list(funcList)
         self.function = self.invoke
 
-    def invoke(self, tupOrExpr, mem=None):
-        res = tupOrExpr
+    def __str__(self):
+        return self.name
+
+    def invoke(self, argTuple):
+        res = argTuple
         for fn in self.funcList[::-1]:
-            res = fn.invoke(res, mem=mem)
-        return res
+            res.tokens[0] = fn.invoke(res)
+        return res.tokens[0]
 
 class LFunc(Function, LValue):
     def __init__(self, wordtoken, params):
